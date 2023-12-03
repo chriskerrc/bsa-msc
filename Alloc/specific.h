@@ -15,7 +15,7 @@ struct bsa {
 
 }; 
 
-int n2row_len(int n); // go from row number to length of row 
+int k2row_len(int k); // go from row number to length of row 
 
 void row_alloc(bsa* b, int row);
 
@@ -24,4 +24,10 @@ int indx2row(int indx);
 int max_row_indx(int row);
 
 int indx2col(int indx);
+
+bool bsa_is_empty(bsa* b); 
+
+int top_live_row(bsa* b); // return number highest allocated rowcd .
+
+int row_indx2indx(int row, int row_indx); //go from index in row to absolute index
 

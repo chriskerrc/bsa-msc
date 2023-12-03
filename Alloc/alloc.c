@@ -2,6 +2,7 @@
 #include "specific.h"
 
 //store size of each row in bsa struct? 
+//watch out for segfaults when user passes in big numbers
 
 bsa* bsa_init(void)
 {
@@ -9,22 +10,50 @@ bsa* bsa_init(void)
    return b;
 } 
 
-
-/*
+// Set element at index indx with value d i.e. b[i] = d;
+   // May require an allocation if it's the first element in that row
 bool bsa_set(bsa* b, int indx, int d)
 {
-   // Set element at index indx with value d i.e. b[i] = d;
-   // May require an allocation if it's the first element in that row
-       //i.e. if pointer to that row is null
+   int row = indx2row(indx);
+   int col = indx2col(indx);
+   if(b->p[row]==NULL){
+      row_alloc(b, row);
+      b->p[row][col].n = d; //could this be rewritten to avoid duplicating insertion lines across if statements?
+      b->p[row][col].set = true;
+      return true; //need to test it's actually inserted before returning true?
+   }
+   if(b->p[row]!=NULL){
+      b->p[row][col].n = d;
+      b->p[row][col].set = true;
+      return true;
+   }
+  return false; //when would you ever get to this case?
 }
 
+
+
+// Return pointer to data at element b[i]
+   // or NULL if element is unset, or part of a row that hasn't been allocated.
 
 int* bsa_get(bsa* b, int indx)
-{
-   // Return pointer to data at element b[i]
-   // or NULL if element is unset, or part of a row that hasn't been allocated.
+{   
+   int row = indx2row(indx); 
+   if(b->p[row]==NULL){
+      return NULL; //or return a null pointer? 
+   }
+   if(b->p[row]!=NULL){
+      int col = indx2col(indx);
+      if(b->p[row][col].set == false){ 
+         return NULL;
+      }
+      if(b->p[row][col].set == true){
+         return &b->p[row][col].n; 
+      }
+   } 
+   return NULL;   
 }
 
+/*
 
 bool bsa_delete(bsa* b, int indx)
 {
@@ -33,11 +62,32 @@ bool bsa_delete(bsa* b, int indx)
 }
 
 
+*/
+
 int bsa_maxindex(bsa* b)
-{
-   // Returns maximum index written to so far or
-   // -1 if no cells have been written to yet
+{  
+   if(b == NULL){ //has this actually handled the test case in driver.c?
+      return -1;
+   }
+   if(bsa_is_empty(b)){
+      return -1;
+   }
+   if(!bsa_is_empty(b)){
+      int row = top_live_row(b); //get highest allocated row
+      int row_len = k2row_len(row);
+      for(int col = row_len - 1; col >= 0; col--){
+         if(b->p[row][col].set == true){
+            int row_indx = col; 
+            int max_indx = row_indx2indx(row, row_indx);
+            return max_indx;
+         }
+      }   
+   }
+   return -1;
+   //account for case where row is allocated without anything set in it (even though this shouldn't happen) 
 }
+
+/*
 
 bool bsa_tostring(bsa* b, char* str)
 {
@@ -94,23 +144,66 @@ int indx2col(int indx)
    return col;
 }
 
+int row_indx2indx(int row, int row_indx)
+{  
+   if(row > 0 && row < 30){
+      int prv_rw = row - 1; //magic number
+      int prv_mx_rw_indx = max_row_indx(prv_rw);
+      int abs_indx = prv_mx_rw_indx + row_indx + 1; //magic number
+      return abs_indx;
+   }
+   if(row == 0){
+      return 0;
+   }
+   return 1;
+}
+
 //function to get length of row from row number 
-int n2row_len(int n)
+int k2row_len(int k)
 {
-   int len = 1<<n;
+   int len = 1<<k;
    return len;  
 }
 
 //function to allocate row, called in bsa_set
 void row_alloc(bsa* b, int row)
 { 
-   int row_len = n2row_len(row);
+   int row_len = k2row_len(row);
    b->p[row] = (col_cell*) calloc(row_len, sizeof(col_cell));
+}
+
+bool bsa_is_empty(bsa* b)
+{
+   int cnt = 0; 
+   for(int i = 0; i<30; i++){
+      if(b->p[i]==NULL){
+         cnt++;
+      } 
+   }
+   //printf("null cnt %i", cnt);
+   if(cnt == 30){
+      return true;
+   }
+   else{
+      return false;
+   }
+}
+
+int top_live_row(bsa* b)
+{
+   for(int k=29; k>-1; k--){
+      if(b->p[k]!=NULL){
+         return k;
+      } 
+   }
+   return 0; //does this overlap with case where only 0 is allocated? 
 }
 
 
 void test(void)
 {
+   //think about edge test cases esp for functions in driver.c 
+   
    //BSA_INIT
    bsa* b = bsa_init();
    assert(b);
@@ -123,7 +216,7 @@ void test(void)
 
    //allocate row 0
    row_alloc(b, 0); 
-   int len = n2row_len(0); //length is 1
+   int len = k2row_len(0); //length is 1
    assert(b->p[0]!=NULL); //check row 0 pointer is pointing to array
    for(int c = 0; c < len; c++){
       assert(b->p[0][c].n == 0); //check calloc has flood-filled with zeros
@@ -132,7 +225,7 @@ void test(void)
 
    //allocate row 2
    row_alloc(b, 2); 
-   len = n2row_len(2); //length is 4
+   len = k2row_len(2); //length is 4
    assert(b->p[2]!=NULL); //check row 2 pointer is pointing to array
    for(int c = 0; c < len; c++){
       assert(b->p[2][c].n == 0);
@@ -141,7 +234,7 @@ void test(void)
 
    //allocate row 17
    row_alloc(b, 17); 
-   len = n2row_len(17); //length is 131072
+   len = k2row_len(17); //length is 131072
    assert(b->p[17]!=NULL); //check row 2 pointer is pointing to array
    for(int c = 0; c < len; c++){
       assert(b->p[17][c].n == 0);
@@ -150,36 +243,36 @@ void test(void)
 
    //N2ROW_LEN
 
-   assert(n2row_len(0)==1); 
-   assert(n2row_len(1)==2); 
-   assert(n2row_len(2)==4); 
-   assert(n2row_len(3)==8); 
-   assert(n2row_len(4)==16); 
-   assert(n2row_len(5)==32); 
-   assert(n2row_len(6)==64); 
-   assert(n2row_len(7)==128); 
-   assert(n2row_len(8)==256); 
-   assert(n2row_len(9)==512); 
-   assert(n2row_len(10)==1024); 
-   assert(n2row_len(11)==2048); 
-   assert(n2row_len(12)==4096); 
-   assert(n2row_len(13)==8192); 
-   assert(n2row_len(14)==16384); 
-   assert(n2row_len(15)==32768); 
-   assert(n2row_len(16)==65536); 
-   assert(n2row_len(17)==131072); 
-   assert(n2row_len(18)==262144); 
-   assert(n2row_len(19)==524288); 
-   assert(n2row_len(20)==1048576); 
-   assert(n2row_len(21)==2097152); 
-   assert(n2row_len(22)==4194304); 
-   assert(n2row_len(23)==8388608); 
-   assert(n2row_len(24)==16777216); 
-   assert(n2row_len(25)==33554432); 
-   assert(n2row_len(26)==67108864); 
-   assert(n2row_len(27)==134217728); 
-   assert(n2row_len(28)==268435456); 
-   assert(n2row_len(29)==536870912);
+   assert(k2row_len(0)==1); 
+   assert(k2row_len(1)==2); 
+   assert(k2row_len(2)==4); 
+   assert(k2row_len(3)==8); 
+   assert(k2row_len(4)==16); 
+   assert(k2row_len(5)==32); 
+   assert(k2row_len(6)==64); 
+   assert(k2row_len(7)==128); 
+   assert(k2row_len(8)==256); 
+   assert(k2row_len(9)==512); 
+   assert(k2row_len(10)==1024); 
+   assert(k2row_len(11)==2048); 
+   assert(k2row_len(12)==4096); 
+   assert(k2row_len(13)==8192); 
+   assert(k2row_len(14)==16384); 
+   assert(k2row_len(15)==32768); 
+   assert(k2row_len(16)==65536); 
+   assert(k2row_len(17)==131072); 
+   assert(k2row_len(18)==262144); 
+   assert(k2row_len(19)==524288); 
+   assert(k2row_len(20)==1048576); 
+   assert(k2row_len(21)==2097152); 
+   assert(k2row_len(22)==4194304); 
+   assert(k2row_len(23)==8388608); 
+   assert(k2row_len(24)==16777216); 
+   assert(k2row_len(25)==33554432); 
+   assert(k2row_len(26)==67108864); 
+   assert(k2row_len(27)==134217728); 
+   assert(k2row_len(28)==268435456); 
+   assert(k2row_len(29)==536870912);
 
    //INDEX2ROW
  
@@ -254,6 +347,36 @@ void test(void)
    
    //KEEP GOING UP TO 29 .............................
    //and add middle index tests above
+
+   //BSA_IS_EMPTY
+   bsa* c = bsa_init(); //empty BSA
+   assert(c);
+   assert(bsa_is_empty(c)==true);
+   row_alloc(c, 0); //allocate one row: BSA not empty
+   assert(bsa_is_empty(c)==false); 
+   
+   //TOP_LIVE_ROW
+   bsa* d = bsa_init();
+   row_alloc(d, 0); //allocate row 0
+   assert(top_live_row(d)==0);
+   row_alloc(d, 5); //allocate row 5
+   assert(top_live_row(d)==5);
+   row_alloc(d, 17); //allocate row 17
+   assert(top_live_row(d)==17);
+   row_alloc(d, 29); //allocate row 29
+   assert(top_live_row(d)==29);
+   //add more testing
+
+   //ROW_INDX2INDX
+   assert(row_indx2indx(0, 0)==0);
+   assert(row_indx2indx(2, 0)==3);
+   assert(row_indx2indx(2, 1)==4);
+   assert(row_indx2indx(2, 3)==6);
+   assert(row_indx2indx(3, 4)==11);
+   //add more testing
+
+
+   //remember to free everything in this test function 
    
 }
 
