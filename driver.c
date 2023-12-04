@@ -8,13 +8,13 @@ void twice(int* p, int* n);
 int main(void)
 {
 
-   //test();
+   test();
 
-   //char str[LISTSTRLEN] = "";
+   char str[LISTSTRLEN] = "";
 
    // A NULL BSA has size zero
    assert(bsa_maxindex(NULL)==-1);
-   //assert(!bsa_tostring(NULL, str));   <-- remember to uncomment this line!
+   assert(!bsa_tostring(NULL, str));   
 
    // Initialise
    bsa* b = bsa_init();

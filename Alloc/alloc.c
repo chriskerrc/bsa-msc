@@ -4,12 +4,15 @@
 //store size of each row in bsa struct? 
 //watch out for segfaults when user passes in big numbers
 //remember to swap out isfactorial.c etc files (I've commented stuff out)
+//handle edge cases e.g. 
+   //check index is between zero and max index (hash define max)
+   //check row between 0 and 29 inclusive
 
 bsa* bsa_init(void)
 {
    bsa* b = (bsa*) calloc(1, sizeof(bsa)); //calloc sets pointers to NULL i.e. pointer to zero is null pointer 
    return b;
-} 
+} //if calloc fails, exit or return null pointer
 
 // Set element at index indx with value d i.e. b[i] = d;
    // May require an allocation if it's the first element in that row
@@ -98,20 +101,24 @@ int bsa_maxindex(bsa* b)
    //account for case where row is allocated without anything set in it (even though this shouldn't happen) 
 }
 
-/*
-
-bool bsa_tostring(bsa* b, char* str)
-{
-  // Returns stringified version of structure
+// Returns stringified version of structure
   // Each row has its elements printed between {}, up to the maximum index.
   // Rows after the maximum index are ignored.
 
-}
+bool bsa_tostring(bsa* b, char* str) //trap if string is null and handle gracefully
+{
+   if(b == NULL){
+      str = "\0";
+      printf("%s", str);
+      return false;
+   }
+  
+   return false;
+} //print out for null BSA is null string 
 
-*/
 
 // Clears up all space used
-bool bsa_free(bsa* b)
+bool bsa_free(bsa* b)  //if null BSA is passed to this funct, return false
 { 
 
  //step through 30 row pointers
@@ -126,7 +133,7 @@ bool bsa_free(bsa* b)
       return true;
    }
    if(bsa_is_empty(b)==false){
-      return false;
+      return false; 
    }
    return false;
 }
@@ -248,6 +255,7 @@ bool is_row_empty(bsa* b, int row)
 
 void test(void)
 {
+  
    //think about edge test cases esp for functions in driver.c 
    
    //BSA_INIT
@@ -258,40 +266,48 @@ void test(void)
       assert(b->p[i]==NULL);
    }
    free(b);
-   
-   //ROW_ALLOC
 
-   //allocate row 0
-   row_alloc(b, 0); 
-   int len = k2row_len(0); //length is 1
-   assert(b->p[0]!=NULL); //check row 0 pointer is pointing to array
-   for(int c = 0; c < len; c++){
-      assert(b->p[0][c].n == 0); //check calloc has flood-filled with zeros
-      assert(b->p[0][c].set == 0);
-   }
-   free(b);
+   //ROW_ALLOC
    
+   //allocate row 0
+   bsa* f = bsa_init();
+   assert(f);
+   row_alloc(f, 0); 
+   int len = k2row_len(0); //length is 1
+   assert(f->p[0]!=NULL); //check row 0 pointer is pointing to array
+   for(int c = 0; c < len; c++){
+      assert(f->p[0][c].n == 0); //check calloc has flood-filled with zeros
+      assert(f->p[0][c].set == 0);
+   }
+   free(f->p[0]); //this is a hacky way of freeing block allocated by row_alloc - find a better way
+   free(f);
 
    //allocate row 2
-   row_alloc(b, 2); 
+   bsa* g = bsa_init();
+   assert(g);
+   row_alloc(g, 2); 
    len = k2row_len(2); //length is 4
-   assert(b->p[2]!=NULL); //check row 2 pointer is pointing to array
+   assert(g->p[2]!=NULL); //check row 2 pointer is pointing to array
    for(int c = 0; c < len; c++){
-      assert(b->p[2][c].n == 0);
-      assert(b->p[2][c].set == 0);
+      assert(g->p[2][c].n == 0);
+      assert(g->p[2][c].set == 0);
    }
-   free(b);
+   free(g->p[2]);
+   free(g);
 
    //allocate row 17
-   row_alloc(b, 17); 
+   bsa* h = bsa_init();
+   assert(h);
+   row_alloc(h, 17); 
    len = k2row_len(17); //length is 131072
-   assert(b->p[17]!=NULL); //check row 2 pointer is pointing to array
+   assert(h->p[17]!=NULL); //check row 2 pointer is pointing to array
    for(int c = 0; c < len; c++){
-      assert(b->p[17][c].n == 0);
-      assert(b->p[17][c].set == 0);
+      assert(h->p[17][c].n == 0);
+      assert(h->p[17][c].set == 0);
    }
-   free(b);
-
+   free(h->p[17]);
+   free(h);
+   
 
    //N2ROW_LEN
 
@@ -401,12 +417,15 @@ void test(void)
    //and add middle index tests above
 
    //BSA_IS_EMPTY
+   
    bsa* c = bsa_init(); //empty BSA
    assert(c);
    assert(bsa_is_empty(c)==true);
    row_alloc(c, 0); //allocate one row: BSA not empty
    assert(bsa_is_empty(c)==false); 
+   free(c->p[0]);
    free(c);
+   
    
    //TOP_LIVE_ROW
    bsa* d = bsa_init();
@@ -419,6 +438,10 @@ void test(void)
    row_alloc(d, 29); //allocate row 29
    assert(top_live_row(d)==29);
    //add more testing
+   free(d->p[0]); //create a function to free stuff allocated by row_alloc in test funct
+   free(d->p[5]);
+   free(d->p[17]);
+   free(d->p[29]);
    free(d);
 
    //ROW_INDX2INDX
@@ -435,6 +458,7 @@ void test(void)
    assert(is_row_empty(e, 3)==true);
    bsa_set(e, 8, 10);
    assert(is_row_empty(e, 3)==false);
+   free(e->p[3]);
    free(e);
    
    //remember to free everything in this test function 
