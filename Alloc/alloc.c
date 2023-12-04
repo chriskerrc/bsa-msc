@@ -31,7 +31,7 @@ bool bsa_set(bsa* b, int indx, int d)
       b->p[row][col].set = true;
       return true;
    }
-  return false; //when would you ever get to this case?
+  return false; //when would you ever get to this case? - when BSA is null, and when else?
 }
 
 
@@ -107,12 +107,42 @@ int bsa_maxindex(bsa* b)
 
 bool bsa_tostring(bsa* b, char* str) //trap if string is null and handle gracefully
 {
+   char tmp[TMPSTRLEN] = {'\0'};  //how big should TMP string be? - ASK
+   char open_c = '{'; //hash define these chars as constants?
+   char close_c = '}';   
+   char open_s = '[';
+   char close_s = ']';
+   char eq = '=';
    if(b == NULL){
-      str = "\0";
       printf("%s", str);
       return false;
    }
-  
+   if(b != NULL){
+      //int max_indx = bsa_maxindex(b);
+      //int max_indx_rw = indx2row(max_indx);
+      for(int row = 0; row < 30; row++){ // 0 and 30 magic number
+         if(b->p[row]==NULL){
+            sprintf(tmp, "%c%c", open_c, close_c); // {}
+            //printf("tmp str 1: %s\n", tmp);       
+            strcat(str, tmp);
+         } 
+         if(b->p[row]!=NULL){
+            sprintf(tmp, "%c", open_c); // {
+            //printf("tmp str 2: %s\n", tmp); 
+            strcat(str, tmp);
+            int row_len = k2row_len(row);
+            for(int col = row_len - 1; col > -1; col--){
+               if(b->p[row][col].set == true){ 
+                  int d = b->p[row][col].n;
+                  int indx = row_indx2indx(row, col);
+                  sprintf(tmp, "%c%i%c%c%i%c", open_s, indx, close_s, eq, d, close_c); //[indx]=d} will only work if only one element set in row
+                  //printf("tmp str 3: %s\n", tmp); 
+                  strcat(str, tmp);
+                }
+            }
+         }
+      }
+    }
    return false;
 } //print out for null BSA is null string 
 
@@ -122,7 +152,7 @@ bool bsa_free(bsa* b)  //if null BSA is passed to this funct, return false
 { 
 
  //step through 30 row pointers
-   for(int row = 0; row<30; row++){
+   for(int row = 0; row<30; row++){ // 0 and 30 magic number
       if(b->p[row]!=NULL){
          free(b->p[row]);
          b->p[row] = NULL;
@@ -255,7 +285,7 @@ bool is_row_empty(bsa* b, int row)
 
 void test(void)
 {
-  
+   //remember to free everything in this test function 
    //think about edge test cases esp for functions in driver.c 
    
    //BSA_INIT
@@ -460,9 +490,37 @@ void test(void)
    assert(is_row_empty(e, 3)==false);
    free(e->p[3]);
    free(e);
+
+   //BSA_TOSTRING
    
-   //remember to free everything in this test function 
+   //empty BSA all rows
+   char tst[TSTSTRLEN];
+  
+   bsa* i = bsa_init();
+   bsa_tostring(i, tst);
+   assert(strcmp(tst, "{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}")==0);
+   printf("%s\n", tst);
+   free(i);
+   strcpy(tst, "");
    
+   //one set element (current code will break for multiple elements in row cos } is hardcoded to follow every set element
+   bsa* j = bsa_init();
+   bsa_set(j, 4, 9); //set "9" at index 4, row 2
+   bsa_tostring(j, tst);
+   assert(strcmp(tst, "{}{}{[4]=9}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}")==0); 
+   printf("%s\n", tst);
+   free(j);
+   strcpy(tst, "");
+   /*
+   two set elements same row
+      to do
+
+   two set elements different row
+      to do
+
+   stop printing rows after max index 
+      to do
+   */
 }
 
 

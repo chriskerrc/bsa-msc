@@ -1,6 +1,8 @@
 #pragma once
 
 //#define max length of 2D array
+#define TMPSTRLEN 30
+#define TSTSTRLEN 1000
 
 typedef struct col_cell {
    
