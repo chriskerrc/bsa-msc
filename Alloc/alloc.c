@@ -3,6 +3,7 @@
 
 //store size of each row in bsa struct? 
 //watch out for segfaults when user passes in big numbers
+//remember to swap out isfactorial.c etc files (I've commented stuff out)
 
 bsa* bsa_init(void)
 {
@@ -53,16 +54,26 @@ int* bsa_get(bsa* b, int indx)
    return NULL;   
 }
 
-/*
 
-bool bsa_delete(bsa* b, int indx)
-{
-   // Delete element at index indx - forces a shrink
+// Delete element at index indx - forces a shrink
    // if that was the only cell in the row occupied.
+bool bsa_delete(bsa* b, int indx)
+{  
+   int row = indx2row(indx); 
+   int col = indx2col(indx);
+   if(b->p[row][col].set == false){
+      return false; 
+   }
+   if(b->p[row][col].set == true){
+      b->p[row][col].set = false;
+      if(is_row_empty(b,row)==true){
+         free(b->p[row]); //free row pointer 
+         b->p[row]=NULL;  //set pointer to NULL
+      }
+      return true; 
+   }
+  return false;    
 }
-
-
-*/
 
 int bsa_maxindex(bsa* b)
 {  
@@ -97,13 +108,30 @@ bool bsa_tostring(bsa* b, char* str)
 
 }
 
+*/
 
+// Clears up all space used
 bool bsa_free(bsa* b)
-{
-   // Clears up all space used
+{ 
 
+ //step through 30 row pointers
+   for(int row = 0; row<30; row++){
+      if(b->p[row]!=NULL){
+         free(b->p[row]);
+         b->p[row] = NULL;
+      }
+   }
+   if(bsa_is_empty(b)==true){
+      free(b);
+      return true;
+   }
+   if(bsa_is_empty(b)==false){
+      return false;
+   }
+   return false;
 }
 
+/*
 
 void bsa_foreach(void (*func)(int* p, int* n), bsa* b, int* acc)
 {
@@ -199,6 +227,24 @@ int top_live_row(bsa* b)
    return 0; //does this overlap with case where only 0 is allocated? 
 }
 
+bool is_row_empty(bsa* b, int row)
+{
+   int cnt = 0;
+   int row_len = k2row_len(row);
+   for(int col = row_len - 1; col > -1; col--){ //magic num
+      if(b->p[row][col].set == true){
+         cnt++; 
+      }
+   }
+   if(cnt > 0){ 
+      return false;
+   }
+   if(cnt == 0){
+      return true;
+   }
+   return 0;
+}
+
 
 void test(void)
 {
@@ -211,6 +257,7 @@ void test(void)
    for(int i = 0; i<30; i++){
       assert(b->p[i]==NULL);
    }
+   free(b);
    
    //ROW_ALLOC
 
@@ -222,6 +269,8 @@ void test(void)
       assert(b->p[0][c].n == 0); //check calloc has flood-filled with zeros
       assert(b->p[0][c].set == 0);
    }
+   free(b);
+   
 
    //allocate row 2
    row_alloc(b, 2); 
@@ -231,6 +280,7 @@ void test(void)
       assert(b->p[2][c].n == 0);
       assert(b->p[2][c].set == 0);
    }
+   free(b);
 
    //allocate row 17
    row_alloc(b, 17); 
@@ -240,6 +290,8 @@ void test(void)
       assert(b->p[17][c].n == 0);
       assert(b->p[17][c].set == 0);
    }
+   free(b);
+
 
    //N2ROW_LEN
 
@@ -354,6 +406,7 @@ void test(void)
    assert(bsa_is_empty(c)==true);
    row_alloc(c, 0); //allocate one row: BSA not empty
    assert(bsa_is_empty(c)==false); 
+   free(c);
    
    //TOP_LIVE_ROW
    bsa* d = bsa_init();
@@ -366,6 +419,7 @@ void test(void)
    row_alloc(d, 29); //allocate row 29
    assert(top_live_row(d)==29);
    //add more testing
+   free(d);
 
    //ROW_INDX2INDX
    assert(row_indx2indx(0, 0)==0);
@@ -375,7 +429,14 @@ void test(void)
    assert(row_indx2indx(3, 4)==11);
    //add more testing
 
-
+   //IS_ROW_EMPTY
+   bsa* e = bsa_init();
+   row_alloc(e, 3); //allocate row 3
+   assert(is_row_empty(e, 3)==true);
+   bsa_set(e, 8, 10);
+   assert(is_row_empty(e, 3)==false);
+   free(e);
+   
    //remember to free everything in this test function 
    
 }

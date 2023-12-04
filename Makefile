@@ -5,8 +5,8 @@ SANITIZE= $(COMMON) -fsanitize=undefined -fsanitize=address $(DEBUG)
 VALGRIND= $(COMMON) $(DEBUG)
 PRODUCTION= $(COMMON) -O3
 
-all: driverbsa_s driverbsa # fibmemo sieve_s isfactorial  extfibmemo_s
-##remember to uncomment fibmemo, sieve_s, isfactorial 
+all: driverbsa_s driverbsa fibmemo sieve_s isfactorial # extfibmemo_s
+
 driverbsa_s: bsa.h Alloc/specific.h Alloc/alloc.c driver.c
 	$(CC) driver.c Alloc/alloc.c -o driverbsa_s -I./Alloc $(SANITIZE)
 
@@ -22,15 +22,20 @@ isfactorial: bsa.h Alloc/specific.h Alloc/alloc.c isfactorial.c
 sieve_s: bsa.h Alloc/specific.h Alloc/alloc.c sieve.c
 	$(CC) sieve.c Alloc/alloc.c -o sieve_s -I./Alloc $(PRODUCTION)
 
+sieve_v: bsa.h Alloc/specific.h Alloc/alloc.c sieve.c
+	$(CC) sieve.c Alloc/alloc.c -o sieve_v -I./Alloc $(VALGRID)
+
 ## Only if you do an extension. Uncomment in all, extfibmemo_s and run.
 extfibmemo_s: bsa.h Extension/specific.h Extension/extension.c fibmemo.c
 	$(CC) fibmemo.c Extension/extension.c -o extfibmemo_s -I./Extension $(SANITIZE)
 
-run: driverbsa driverbsa_s # fibmemo sieve_s isfactorial  extfibmemo_s
+run: driverbsa driverbsa_s fibmemo sieve_s sieve_v isfactorial # extfibmemo_s
+	./driverbsa
 	./driverbsa_s
-	#./isfactorial (remember to uncomment)
-	#./fibmemo
-	#./sieve_s
+	./isfactorial
+	./fibmemo
+	./sieve_s
+	valgrind ./sieve_v
 	#./extfibmemo_s
 
 clean:

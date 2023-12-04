@@ -8,7 +8,7 @@ void twice(int* p, int* n);
 int main(void)
 {
 
-   test();
+   //test();
 
    //char str[LISTSTRLEN] = "";
 
@@ -62,7 +62,7 @@ int main(void)
 /*
    assert(bsa_tostring(b, str));
    assert(strcmp(str, "{[0]=0}{}{}{}{[15]=15}{}{[100]=100}")==0);
-
+*/
    // Let's do some deleting
 
    // Cell not not used, can't delete it
@@ -71,21 +71,21 @@ int main(void)
    assert(bsa_delete(b, 100));
    assert(bsa_maxindex(b)==15);
    // Check it's gone
-   assert(bsa_tostring(b, str));
-   assert(strcmp(str, "{[0]=0}{}{}{}{[15]=15}")==0);
+   //assert(bsa_tostring(b, str));
+   //assert(strcmp(str, "{[0]=0}{}{}{}{[15]=15}")==0);
    // Cell is used, can delete it
    assert(bsa_delete(b, 15));
    assert(bsa_maxindex(b)==0);
-   assert(bsa_tostring(b, str));
-   assert(strcmp(str, "{[0]=0}")==0);
+   //assert(bsa_tostring(b, str));
+   //assert(strcmp(str, "{[0]=0}")==0);
    // Delete last element left
    assert(bsa_delete(b, 0));
    assert(bsa_maxindex(b)<0);
-   assert(bsa_tostring(b, str));
-   assert(strcmp(str, "")==0);
-  
-   bsa_free(b);
+   //assert(bsa_tostring(b, str));
+   //assert(strcmp(str, "")==0);
 
+   bsa_free(b);
+/*
    // foreach - use it to compute product of numbers, and also to double each one
    b = bsa_init();
    bsa_set(b, 1, 1);

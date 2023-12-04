@@ -31,3 +31,6 @@ int top_live_row(bsa* b); // return number highest allocated rowcd .
 
 int row_indx2indx(int row, int row_indx); //go from index in row to absolute index
 
+bool is_row_empty(bsa* b, int row); // true if no element of row is set
+
+
