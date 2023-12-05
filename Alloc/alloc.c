@@ -112,8 +112,7 @@ bool bsa_tostring(bsa* b, char* str) //trap if string is null and handle gracefu
       //need to keep track of last set element in row (doesn't have space after it
       //need to keep track of how many set elements in row: if more than 1, first has space after it, last doesn't
    char tmp[TMPSTRLEN] = {'\0'};  //how big should TMP string be? - ASK
-   strcpy(str, "");
-   printf("str str 0: %s\n", str);
+   strcpy(str, ""); //clear garbage from str passed in
    str[TMPSTRLEN] = 0;
    char open_c = '{'; //hash define these chars as constants?
    char close_c = '}';   
@@ -130,30 +129,34 @@ bool bsa_tostring(bsa* b, char* str) //trap if string is null and handle gracefu
       for(int row = 0; row <= max_indx_rw; row++){ // 0 and 30 magic number 
          if(b->p[row]==NULL){
             sprintf(tmp, "%c%c", open_c, close_c); // {}
-            printf("tmp str 1: %s\n", tmp);       
-            printf("str str 1: %s\n", str); //str has weird stuff prepended to it here
             strcat(str, tmp);
          } 
          if(b->p[row]!=NULL){
+            int max_set_cell = maxrowindx(b, row);
             sprintf(tmp, "%c", open_c); // {
-            printf("tmp str 2: %s\n", tmp); 
-            printf("str str 2: %s\n", str);
             strcat(str, tmp);
             int row_len = k2row_len(row);
-            for(int col = row_len - 1; col > -1; col--){   //handle this in separate function if possible to reduce nesting
+            for(int col = 0 ; col < row_len ; col++){   //handle this in separate function if possible to reduce nesting
                if(b->p[row][col].set == true){ 
                   int d = b->p[row][col].n;
                   int indx = row_indx2indx(row, col);
-                  sprintf(tmp, "%c%i%c%c%i%c", open_s, indx, close_s, eq, d, close_c); //[indx]=d} will only work if only one element set in row
-                  printf("tmp str 3: %s\n", tmp); 
-                  printf("str str 3: %s\n", str);
-                  strcat(str, tmp);
+                  if(col != max_set_cell){
+                     sprintf(tmp, "%c%i%c%c%i ", open_s, indx, close_s, eq, d); //[indx]=dSPACE (hash define this string of identifiers)
+                     strcat(str, tmp);
+                  }
+                  if(col == max_set_cell){
+                     sprintf(tmp, "%c%i%c%c%i", open_s, indx, close_s, eq, d); //[indx]=d  (hash define this string of identifiers)
+                     strcat(str, tmp);
+                  }
+
                 }
             }
+            sprintf(tmp, "%c", close_c); // }
+            strcat(str, tmp);
          } //return true somewhere where I know we'e got to the end of the string
     }
    return true;
-} //print out for null BSA is null string 
+} //the print out for null BSA is null string 
 
 
 // Clears up all space used
@@ -177,17 +180,39 @@ bool bsa_free(bsa* b)  //if null BSA is passed to this funct, return false
    return false;
 }
 
-/*
-
-void bsa_foreach(void (*func)(int* p, int* n), bsa* b, int* acc)
-{
 // Allow a user-defined function to be applied to each (valid) value 
 // in the array. The user defined 'func' is passed a pointer to an int,
 // and maintains an accumulator of the result where required.
-
+void bsa_foreach(void (*func)(int* p, int* n), bsa* b, int* acc)
+{  
+   int row = 0;
+   if(b->p[row]!=NULL){
+      for(row = 0; row < 30; row++){   // magic number 30 
+         int row_len = k2row_len(row);
+         for(int col = 0; col < row_len; col++){ 
+            if(b->p[row][col].set == true){
+               int* ptr = &b->p[row][col].n;
+               func(ptr, acc);
+               //printf("%i", *acc);
+            }  
+         }
+      } 
+   }      
 }
 
-*/
+
+//incorporate this function into bsa_maxindex (currently, they overlap)
+int maxrowindx(bsa* b, int row)
+{
+      int row_len = k2row_len(row);
+      for(int col = row_len - 1; col >= 0; col--){
+         if(b->p[row][col].set == true){
+            int row_indx = col; 
+            return row_indx;
+         }
+      }   
+   return 0;
+}
 
 int indx2row(int indx)
 {
@@ -298,13 +323,13 @@ void test(void)
    //think about edge test cases esp for functions in driver.c 
    
    //BSA_INIT
-   bsa* b = bsa_init();
-   assert(b);
+   bsa* z = bsa_init();
+   assert(z);
    //check that 30 pointers in empty BSA are null
    for(int i = 0; i<30; i++){
-      assert(b->p[i]==NULL);
+      assert(z->p[i]==NULL);
    }
-   free(b);
+   bsa_free(z);
 
    //ROW_ALLOC
    
@@ -318,8 +343,7 @@ void test(void)
       assert(f->p[0][c].n == 0); //check calloc has flood-filled with zeros
       assert(f->p[0][c].set == 0);
    }
-   free(f->p[0]); //this is a hacky way of freeing block allocated by row_alloc - find a better way
-   free(f);
+   bsa_free(f);
 
    //allocate row 2
    bsa* g = bsa_init();
@@ -331,8 +355,7 @@ void test(void)
       assert(g->p[2][c].n == 0);
       assert(g->p[2][c].set == 0);
    }
-   free(g->p[2]);
-   free(g);
+   bsa_free(g);
 
    //allocate row 17
    bsa* h = bsa_init();
@@ -344,8 +367,7 @@ void test(void)
       assert(h->p[17][c].n == 0);
       assert(h->p[17][c].set == 0);
    }
-   free(h->p[17]);
-   free(h);
+   bsa_free(h);
    
 
    //N2ROW_LEN
@@ -462,8 +484,7 @@ void test(void)
    assert(bsa_is_empty(c)==true);
    row_alloc(c, 0); //allocate one row: BSA not empty
    assert(bsa_is_empty(c)==false); 
-   free(c->p[0]);
-   free(c);
+   bsa_free(c);
    
    
    //TOP_LIVE_ROW
@@ -477,11 +498,7 @@ void test(void)
    row_alloc(d, 29); //allocate row 29
    assert(top_live_row(d)==29);
    //add more testing
-   free(d->p[0]); //create a function to free stuff allocated by row_alloc in test funct
-   free(d->p[5]);
-   free(d->p[17]);
-   free(d->p[29]);
-   free(d);
+   bsa_free(d);
 
    //ROW_INDX2INDX
    assert(row_indx2indx(0, 0)==0);
@@ -497,8 +514,7 @@ void test(void)
    assert(is_row_empty(e, 3)==true);
    bsa_set(e, 8, 10);
    assert(is_row_empty(e, 3)==false);
-   free(e->p[3]);
-   free(e);
+   bsa_free(e);
 
    //BSA_TOSTRING
    
@@ -513,41 +529,72 @@ void test(void)
    free(i);
    strcpy(tst, "");
    */
-   //one set element (current code will break for multiple elements in row cos } is hardcoded to follow every set element
+
+   //one set element & stop printing rows after max index 
    bsa* j = bsa_init();
    bsa_set(j, 4, 9); //set "9" at index 4, row 2
    bsa_tostring(j, tst);
    assert(strcmp(tst, "{}{}{[4]=9}")==0); 
-   printf("string with weird stuff: %s\n", tst);
-   free(j);
+   bsa_free(j);
    strcpy(tst, "");
-   
-
+  
    //two elements set as only element in two rows
+        //maybe some redundant stuff in this test
    bsa* k = bsa_init();
-
    assert(k);
-
    assert(bsa_maxindex(k)==-1);
-
-   // Set some values
    assert(bsa_set(k, 0, 4));
    assert(bsa_maxindex(k)==0);
-   // Reset existing value
    assert(bsa_set(k, 0, 0));
    assert(bsa_set(k, 15, 15));
    assert(bsa_tostring(k, tst));
    assert(strcmp(tst, "{[0]=0}{}{}{}{[15]=15}")==0);
-   /*
-   two set elements same row
-      to do
+   bsa_free(k);
+   strcpy(tst, "");
+            
+   //two set elements same row
+   bsa* m = bsa_init();
+   bsa_set(m, 1, 1); //set "1" at index 1, row 1
+   bsa_set(m, 2, 2); //set "2" at index 2, row 1
+   bsa_set(m, 3, 3); //set "3" at index 3, row 2
+   bsa_tostring(m, tst);
+   assert(strcmp(tst, "{}{[1]=1 [2]=2}{[3]=3}")==0);
+   bsa_free(m);
+   strcpy(tst, "");
 
-   two set elements different row
-      to do
+   //three elements same row
+   bsa* n = bsa_init();
+   bsa_set(n, 3, 9); //set "9" at index 3, row 2
+   bsa_set(n, 4, 10); //set "10" at index 4, row 2
+   bsa_set(n, 5, 11); //set "11" at index 5, row 2
+   bsa_tostring(n, tst);
+   assert(strcmp(tst, "{}{}{[3]=9 [4]=10 [5]=11}")==0);
+   bsa_free(n);
+   strcpy(tst, "");
+ 
+   //two set elements  per row on two different rows
+   bsa* o = bsa_init();
+   bsa_set(o, 1, 5); //set "1" at index 1, row 1
+   bsa_set(o, 2, 6); //set "2" at index 2, row 1
+   bsa_set(o, 3, 7); //set "3" at index 3, row 2
+   bsa_set(o, 4, 8); //set "3" at index 3, row 2
+   bsa_tostring(o, tst);
+   assert(strcmp(tst, "{}{[1]=5 [2]=6}{[3]=7 [4]=8}")==0);
+   bsa_free(o);
+   strcpy(tst, "");
 
-   stop printing rows after max index 
-      to do
-   */
+   //MAX_ROW_INDX
+   bsa* l = bsa_init();
+   assert(l);
+   bsa_set(l, 8, 4); //set index 8 to 4
+   bsa_set(l, 10, 5); //set index 10 to 5
+   assert(maxrowindx(l, 3)==3); // max set index in row 3 is row index 3 i.e. abs index 10
+   bsa_set(l, 13, 7); //set index 13 to 6
+   assert(maxrowindx(l, 3)==6); // max set index in row 3 is row index 6 i.e. abs index 13
+   bsa_set(l, 14, 12); //set index 14 to 12
+   assert(maxrowindx(l, 3)==7); // max set index in row 3 is row index 7 i.e. abs index 14
+   bsa_free(l);
+
 }
 
 

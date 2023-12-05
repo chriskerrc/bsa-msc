@@ -35,4 +35,6 @@ int row_indx2indx(int row, int row_indx); //go from index in row to absolute ind
 
 bool is_row_empty(bsa* b, int row); // true if no element of row is set
 
+int maxrowindx(bsa* b, int row);
+
 

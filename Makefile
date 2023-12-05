@@ -5,7 +5,7 @@ SANITIZE= $(COMMON) -fsanitize=undefined -fsanitize=address $(DEBUG)
 VALGRIND= $(COMMON) $(DEBUG)
 PRODUCTION= $(COMMON) -O3
 
-all: driverbsa_s driverbsa fibmemo sieve_s isfactorial # extfibmemo_s
+all: driverbsa_s driverbsa fibmemo sieve_s sieve_v isfactorial # extfibmemo_s
 
 driverbsa_s: bsa.h Alloc/specific.h Alloc/alloc.c driver.c
 	$(CC) driver.c Alloc/alloc.c -o driverbsa_s -I./Alloc $(SANITIZE)
@@ -39,4 +39,4 @@ run: driverbsa driverbsa_s fibmemo sieve_s sieve_v isfactorial # extfibmemo_s
 	#./extfibmemo_s
 
 clean:
-	rm -f driverbsa_s driverbsa fibmemo extfibmemo_s isfactorial sieve_s
+	rm -f driverbsa_s driverbsa fibmemo extfibmemo_s isfactorial sieve_s sieve_v

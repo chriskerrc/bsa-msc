@@ -9,18 +9,15 @@ int main(void)
 {
 
    test();
-
    char str[LISTSTRLEN] = "";
 
    // A NULL BSA has size zero
    assert(bsa_maxindex(NULL)==-1);
-   assert(!bsa_tostring(NULL, str));   
+   assert(!bsa_tostring(NULL, str));
 
    // Initialise
    bsa* b = bsa_init();
-
    assert(b);
-
    assert(bsa_maxindex(b)==-1);
 
    // Set some values
@@ -29,11 +26,11 @@ int main(void)
    // Reset existing value
    assert(bsa_set(b, 0, 0));
    assert(bsa_set(b, 15, 15));
-/*
+
    // tostring
    assert(bsa_tostring(b, str));
    assert(strcmp(str, "{[0]=0}{}{}{}{[15]=15}")==0);
-*/
+
    // Get some values tbsa've already been set
    int* p = bsa_get(b, 0);
    assert(p);
@@ -59,10 +56,10 @@ int main(void)
    p = bsa_get(b, 15);
    assert(p);
    assert(*p == 15);
-/*
+
    assert(bsa_tostring(b, str));
    assert(strcmp(str, "{[0]=0}{}{}{}{[15]=15}{}{[100]=100}")==0);
-*/
+
    // Let's do some deleting
 
    // Cell not not used, can't delete it
@@ -71,19 +68,19 @@ int main(void)
    assert(bsa_delete(b, 100));
    assert(bsa_maxindex(b)==15);
    // Check it's gone
-   //assert(bsa_tostring(b, str));
-   //assert(strcmp(str, "{[0]=0}{}{}{}{[15]=15}")==0);
+   assert(bsa_tostring(b, str));
+   assert(strcmp(str, "{[0]=0}{}{}{}{[15]=15}")==0);
    // Cell is used, can delete it
    assert(bsa_delete(b, 15));
    assert(bsa_maxindex(b)==0);
-   //assert(bsa_tostring(b, str));
-   //assert(strcmp(str, "{[0]=0}")==0);
+   assert(bsa_tostring(b, str));
+   assert(strcmp(str, "{[0]=0}")==0);
    // Delete last element left
    assert(bsa_delete(b, 0));
    assert(bsa_maxindex(b)<0);
-   //assert(bsa_tostring(b, str));
-   //assert(strcmp(str, "")==0);
-
+   assert(bsa_tostring(b, str));
+   assert(strcmp(str, "")==0);
+  
    bsa_free(b);
 /*
    // foreach - use it to compute product of numbers, and also to double each one
@@ -103,7 +100,6 @@ int main(void)
    bsa_free(b);
 */
    return 0;
-
 }
 
 void times(int* p, int* n)
@@ -117,4 +113,4 @@ void twice(int* p, int* n)
    *n = 0;
    *p = *p * 2;
 }
-
+   
