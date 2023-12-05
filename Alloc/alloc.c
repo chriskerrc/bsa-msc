@@ -185,19 +185,21 @@ bool bsa_free(bsa* b)  //if null BSA is passed to this funct, return false
 // and maintains an accumulator of the result where required.
 void bsa_foreach(void (*func)(int* p, int* n), bsa* b, int* acc)
 {  
-   int row = 0;
-   if(b->p[row]!=NULL){
-      for(row = 0; row < 30; row++){   // magic number 30 
-         int row_len = k2row_len(row);
-         for(int col = 0; col < row_len; col++){ 
-            if(b->p[row][col].set == true){
-               int* ptr = &b->p[row][col].n;
-               func(ptr, acc);
-               //printf("%i", *acc);
-            }  
-         }
-      } 
-   }      
+ 
+  
+      for(int row = 0; row < 30; row++){ 
+           if(b->p[row]!=NULL){  // magic number 30 
+              int row_len = k2row_len(row);
+                 for(int col = 0; col < row_len; col++){ 
+                    if(b->p[row][col].set == true){
+                       int* ptr = &b->p[row][col].n;
+                       func(ptr, acc);
+                       //printf("%i", *acc);
+                    }  
+                 }
+           } 
+         
+       }   
 }
 
 
