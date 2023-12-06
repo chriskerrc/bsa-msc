@@ -1,8 +1,16 @@
 #pragma once
 
 //#define max length of 2D array
-#define TMPSTRLEN 30
+#define TMPSTRLEN 1000
 #define TSTSTRLEN 1000
+#define OPN_CUR_BR '{'
+#define CLS_CUR_BR '}'
+#define OPN_SQ_BR '['
+#define CLS_SQ_BR ']'
+#define EQ '='
+#define FMT_ST_SPACE "%c%i%c%c%i " 
+#define FMT_ST_NSPACE "%c%i%c%c%i" 
+#define MAX_ROW 30
 
 typedef struct col_cell {
    
@@ -36,5 +44,7 @@ int row_indx2indx(int row, int row_indx); //go from index in row to absolute ind
 bool is_row_empty(bsa* b, int row); // true if no element of row is set
 
 int maxrowindx(bsa* b, int row);
+
+void vald_rw_2str(bsa* b, char* str, char* tmp, int row); // sub-function for 2 string 
 
 

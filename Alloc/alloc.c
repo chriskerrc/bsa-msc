@@ -1,9 +1,7 @@
 #include "../bsa.h"
 #include "specific.h"
 
-//store size of each row in bsa struct? 
 //watch out for segfaults when user passes in big numbers
-//remember to swap out isfactorial.c etc files (I've commented stuff out)
 //handle edge cases e.g. 
    //check index is between zero and max index (hash define max)
    //check row between 0 and 29 inclusive
@@ -34,8 +32,6 @@ bool bsa_set(bsa* b, int indx, int d)
   return false; //when would you ever get to this case? - when BSA is null, and when else?
 }
 
-
-
 // Return pointer to data at element b[i]
    // or NULL if element is unset, or part of a row that hasn't been allocated.
 
@@ -43,7 +39,7 @@ int* bsa_get(bsa* b, int indx)
 {   
    int row = indx2row(indx); 
    if(b->p[row]==NULL){
-      return NULL; //or return a null pointer? 
+      return NULL;
    }
    if(b->p[row]!=NULL){
       int col = indx2col(indx);
@@ -56,7 +52,6 @@ int* bsa_get(bsa* b, int indx)
    } 
    return NULL;   
 }
-
 
 // Delete element at index indx - forces a shrink
    // if that was the only cell in the row occupied.
@@ -107,64 +102,32 @@ int bsa_maxindex(bsa* b)
 
 bool bsa_tostring(bsa* b, char* str) //trap if string is null and handle gracefully
 {  
-   //reduce nesting in this function 
-   //this function doesn't handle multiple set elements in row
-      //need to keep track of last set element in row (doesn't have space after it
-      //need to keep track of how many set elements in row: if more than 1, first has space after it, last doesn't
-   char tmp[TMPSTRLEN] = {'\0'};  //how big should TMP string be? - ASK
+   char tmp[TMPSTRLEN] = {'\0'};  
    strcpy(str, ""); //clear garbage from str passed in
-   str[TMPSTRLEN] = 0;
-   char open_c = '{'; //hash define these chars as constants?
-   char close_c = '}';   
-   char open_s = '[';
-   char close_s = ']';
-   char eq = '=';
    int max_indx = bsa_maxindex(b);
-      int max_indx_rw = indx2row(max_indx);  //need to stop printing when get to max index 
+   int max_indx_rw = indx2row(max_indx);
    if(b == NULL){
-      printf("%s", str);
       return false;
    }
-      //if empty BSA i.e. max index returns -1, print all rows 
-      for(int row = 0; row <= max_indx_rw; row++){ // 0 and 30 magic number 
-         if(b->p[row]==NULL){
-            sprintf(tmp, "%c%c", open_c, close_c); // {}
-            strcat(str, tmp);
-         } 
-         if(b->p[row]!=NULL){
-            int max_set_cell = maxrowindx(b, row);
-            sprintf(tmp, "%c", open_c); // {
-            strcat(str, tmp);
-            int row_len = k2row_len(row);
-            for(int col = 0 ; col < row_len ; col++){   //handle this in separate function if possible to reduce nesting
-               if(b->p[row][col].set == true){ 
-                  int d = b->p[row][col].n;
-                  int indx = row_indx2indx(row, col);
-                  if(col != max_set_cell){
-                     sprintf(tmp, "%c%i%c%c%i ", open_s, indx, close_s, eq, d); //[indx]=dSPACE (hash define this string of identifiers)
-                     strcat(str, tmp);
-                  }
-                  if(col == max_set_cell){
-                     sprintf(tmp, "%c%i%c%c%i", open_s, indx, close_s, eq, d); //[indx]=d  (hash define this string of identifiers)
-                     strcat(str, tmp);
-                  }
-
-                }
-            }
-            sprintf(tmp, "%c", close_c); // }
-            strcat(str, tmp);
-         } //return true somewhere where I know we'e got to the end of the string
-    }
+   for(int row = 0; row <= max_indx_rw; row++){ 
+      if(b->p[row]==NULL){
+         sprintf(tmp, "%c%c", OPN_CUR_BR, CLS_CUR_BR); 
+         strcat(str, tmp);
+      } 
+      if(b->p[row]!=NULL){
+         vald_rw_2str(b, str, tmp, row);
+      }
+   }
    return true;
-} //the print out for null BSA is null string 
+} 
+//the print out for null BSA is null string - have I done this?
 
 
 // Clears up all space used
 bool bsa_free(bsa* b)  //if null BSA is passed to this funct, return false
 { 
-
  //step through 30 row pointers
-   for(int row = 0; row<30; row++){ // 0 and 30 magic number
+   for(int row = 0; row < MAX_ROW; row++){ 
       if(b->p[row]!=NULL){
          free(b->p[row]);
          b->p[row] = NULL;
@@ -183,23 +146,19 @@ bool bsa_free(bsa* b)  //if null BSA is passed to this funct, return false
 // Allow a user-defined function to be applied to each (valid) value 
 // in the array. The user defined 'func' is passed a pointer to an int,
 // and maintains an accumulator of the result where required.
-void bsa_foreach(void (*func)(int* p, int* n), bsa* b, int* acc)
+void bsa_foreach(void (*func)(int* p, int* n), bsa* b, int* acc) //can I reduce the nesting in this function?
 {  
- 
-  
-      for(int row = 0; row < 30; row++){ 
-           if(b->p[row]!=NULL){  // magic number 30 
-              int row_len = k2row_len(row);
-                 for(int col = 0; col < row_len; col++){ 
-                    if(b->p[row][col].set == true){
-                       int* ptr = &b->p[row][col].n;
-                       func(ptr, acc);
-                       //printf("%i", *acc);
-                    }  
-                 }
-           } 
-         
-       }   
+   for(int row = 0; row < MAX_ROW; row++){ 
+      if(b->p[row]!=NULL){  
+         int row_len = k2row_len(row);
+         for(int col = 0; col < row_len; col++){ 
+            if(b->p[row][col].set == true){
+               int* ptr = &b->p[row][col].n;
+               func(ptr, acc);
+            }  
+         }
+      }       
+   }   
 }
 
 
@@ -216,6 +175,31 @@ int maxrowindx(bsa* b, int row)
    return 0;
 }
 
+void vald_rw_2str(bsa* b, char* str, char* tmp, int row)
+{
+   int max_set_cell = maxrowindx(b, row);
+   sprintf(tmp, "%c", OPN_CUR_BR); 
+   strcat(str, tmp);
+   int row_len = k2row_len(row);
+   for(int col = 0 ; col < row_len ; col++){
+      if(b->p[row][col].set == true){ 
+         int d = b->p[row][col].n;
+         int indx = row_indx2indx(row, col);
+         if(col != max_set_cell){
+            sprintf(tmp, FMT_ST_SPACE, OPN_SQ_BR, indx, CLS_SQ_BR, EQ, d); //[indx]=d+SPACE
+            strcat(str, tmp);
+         }
+         if(col == max_set_cell){
+            sprintf(tmp, FMT_ST_NSPACE, OPN_SQ_BR, indx, CLS_SQ_BR, EQ, d); //[indx]=d
+            strcat(str, tmp);
+         }
+      }
+   }
+   sprintf(tmp, "%c", CLS_CUR_BR); 
+   strcat(str, tmp); 
+}
+
+
 int indx2row(int indx)
 {
    int shifted = 0;
@@ -223,7 +207,7 @@ int indx2row(int indx)
    indx ++; 
 
    while(shifted <= indx){
-      shifted = 1<<n_shift; //1 == magic number
+      shifted = 1<<n_shift; 
       n_shift++; 
    }
    return n_shift-2; //2 == magic number 
@@ -231,8 +215,8 @@ int indx2row(int indx)
 
 int max_row_indx(int row)
 {  
-   int n_shift = row+1; //1 == magic number
-   int pow2 = 1<<n_shift;  //1 == magic number
+   int n_shift = row+1; 
+   int pow2 = 1<<n_shift;  
    int max_indx = pow2 - 2; //2 == magic number 
    return max_indx;
 }
@@ -240,17 +224,17 @@ int max_row_indx(int row)
 int indx2col(int indx)
 {
    int row = indx2row(indx);
-   int prv_rw_offst = max_row_indx(row-1); // 1 == magic num, need max index prev row
-   int col = indx-prv_rw_offst-1; // 1 == magic num
+   int prv_rw_offst = max_row_indx(row-1); 
+   int col = indx-prv_rw_offst-1; 
    return col;
 }
 
 int row_indx2indx(int row, int row_indx)
 {  
-   if(row > 0 && row < 30){
-      int prv_rw = row - 1; //magic number
+   if(row > 0 && row < MAX_ROW){ 
+      int prv_rw = row - 1; 
       int prv_mx_rw_indx = max_row_indx(prv_rw);
-      int abs_indx = prv_mx_rw_indx + row_indx + 1; //magic number
+      int abs_indx = prv_mx_rw_indx + row_indx + 1; 
       return abs_indx;
    }
    if(row == 0){
@@ -276,13 +260,12 @@ void row_alloc(bsa* b, int row)
 bool bsa_is_empty(bsa* b)
 {
    int cnt = 0; 
-   for(int i = 0; i<30; i++){
+   for(int i = 0; i<MAX_ROW; i++){ 
       if(b->p[i]==NULL){
          cnt++;
       } 
    }
-   //printf("null cnt %i", cnt);
-   if(cnt == 30){
+   if(cnt == MAX_ROW){ 
       return true;
    }
    else{
@@ -292,7 +275,7 @@ bool bsa_is_empty(bsa* b)
 
 int top_live_row(bsa* b)
 {
-   for(int k=29; k>-1; k--){
+   for(int k=29; k>-1; k--){  //magic nums 29 and -1 
       if(b->p[k]!=NULL){
          return k;
       } 
@@ -318,17 +301,16 @@ bool is_row_empty(bsa* b, int row)
    return 0;
 }
 
-
 void test(void)
 {
    //remember to free everything in this test function 
    //think about edge test cases esp for functions in driver.c 
    
    //BSA_INIT
-   bsa* z = bsa_init();
+   bsa* z = bsa_init(); //do I need to keep changing letters of BSA like this?
    assert(z);
    //check that 30 pointers in empty BSA are null
-   for(int i = 0; i<30; i++){
+   for(int i = 0; i < MAX_ROW; i++){
       assert(z->p[i]==NULL);
    }
    bsa_free(z);
@@ -520,17 +502,14 @@ void test(void)
 
    //BSA_TOSTRING
    
-   //empty BSA all rows
    char tst[TSTSTRLEN];
-   /*
-   THIS TEST CASE DOESN'T WORK CURRENTLY - does it need to? compare Neill's tests
+   
+   //empty BSA, no rows set i.e. BSA max index == -1
    bsa* i = bsa_init();   
    bsa_tostring(i, tst);
-   assert(strcmp(tst, "{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}")==0);
-   printf("%s\n", tst);
+   assert(strcmp(tst, "")==0);
    free(i);
    strcpy(tst, "");
-   */
 
    //one set element & stop printing rows after max index 
    bsa* j = bsa_init();
@@ -596,6 +575,8 @@ void test(void)
    bsa_set(l, 14, 12); //set index 14 to 12
    assert(maxrowindx(l, 3)==7); // max set index in row 3 is row index 7 i.e. abs index 14
    bsa_free(l);
+  
+   //shouldn't be able to set or get after freeing BSA
 
 }
 
