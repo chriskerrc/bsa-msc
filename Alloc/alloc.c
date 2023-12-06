@@ -1,35 +1,31 @@
 #include "../bsa.h"
 #include "specific.h"
 
-//watch out for segfaults when user passes in big numbers
-//handle edge cases e.g. 
-   //check index is between zero and max index (hash define max)
-   //check row between 0 and 29 inclusive
-
 bsa* bsa_init(void)
 {
    bsa* b = (bsa*) calloc(1, sizeof(bsa)); //calloc sets pointers to NULL i.e. pointer to zero is null pointer 
    return b;
-} //if calloc fails, exit or return null pointer
+} //if calloc fails, exit or return null pointer (do I need to test calloc? - ASK)
 
 // Set element at index indx with value d i.e. b[i] = d;
    // May require an allocation if it's the first element in that row
 bool bsa_set(bsa* b, int indx, int d)
-{
+{  
+   if(b == NULL){
+      return false;
+   }
    int row = indx2row(indx);
    int col = indx2col(indx);
-   if(b->p[row]==NULL){
+   if(row_is_null(b, row)){
       row_alloc(b, row);
-      b->p[row][col].n = d; //could this be rewritten to avoid duplicating insertion lines across if statements?
-      b->p[row][col].set = true;
-      return true; //need to test it's actually inserted before returning true?
-   }
-   if(b->p[row]!=NULL){
-      b->p[row][col].n = d;
-      b->p[row][col].set = true;
+      data_inserted(b, row, col, d);
       return true;
    }
-  return false; //when would you ever get to this case? - when BSA is null, and when else?
+   if(!row_is_null(b, row)){
+      data_inserted(b, row, col, d);
+      return true;
+   }
+  return false;
 }
 
 // Return pointer to data at element b[i]
@@ -38,15 +34,15 @@ bool bsa_set(bsa* b, int indx, int d)
 int* bsa_get(bsa* b, int indx)
 {   
    int row = indx2row(indx); 
-   if(b->p[row]==NULL){
+   if(row_is_null(b, row)){
       return NULL;
    }
-   if(b->p[row]!=NULL){
+   if(!row_is_null(b, row)){
       int col = indx2col(indx);
-      if(b->p[row][col].set == false){ 
+      if(!cell_is_set(b, row, col)){ 
          return NULL;
       }
-      if(b->p[row][col].set == true){
+      if(cell_is_set(b, row, col)){
          return &b->p[row][col].n; 
       }
    } 
@@ -59,12 +55,15 @@ bool bsa_delete(bsa* b, int indx)
 {  
    int row = indx2row(indx); 
    int col = indx2col(indx);
-   if(b->p[row][col].set == false){
+   if(!indx_is_valid(indx)){
+      return false;
+   }
+   if(!cell_is_set(b, row, col)){
       return false; 
    }
-   if(b->p[row][col].set == true){
+   if(cell_is_set(b, row, col)){
       b->p[row][col].set = false;
-      if(is_row_empty(b,row)==true){
+      if(is_row_empty(b,row)){
          free(b->p[row]); //free row pointer 
          b->p[row]=NULL;  //set pointer to NULL
       }
@@ -75,7 +74,7 @@ bool bsa_delete(bsa* b, int indx)
 
 int bsa_maxindex(bsa* b)
 {  
-   if(b == NULL){ //has this actually handled the test case in driver.c?
+   if(b == NULL){
       return -1;
    }
    if(bsa_is_empty(b)){
@@ -83,25 +82,22 @@ int bsa_maxindex(bsa* b)
    }
    if(!bsa_is_empty(b)){
       int row = top_live_row(b); //get highest allocated row
-      int row_len = k2row_len(row);
-      for(int col = row_len - 1; col >= 0; col--){
-         if(b->p[row][col].set == true){
-            int row_indx = col; 
-            int max_indx = row_indx2indx(row, row_indx);
-            return max_indx;
-         }
-      }   
+      int max_row_indx = maxrowindx(b, row);
+      int max_indx = row_indx2indx(row, max_row_indx);
+      return max_indx;
    }
    return -1;
-   //account for case where row is allocated without anything set in it (even though this shouldn't happen) 
 }
 
 // Returns stringified version of structure
   // Each row has its elements printed between {}, up to the maximum index.
   // Rows after the maximum index are ignored.
 
-bool bsa_tostring(bsa* b, char* str) //trap if string is null and handle gracefully
+bool bsa_tostring(bsa* b, char* str) //do I need logic to exit gracefully if size of str passed in is bigger than 1000? - ASK in lab
 {  
+   if(str == NULL){
+      return false;
+   }
    char tmp[TMPSTRLEN] = {'\0'};  
    strcpy(str, ""); //clear garbage from str passed in
    int max_indx = bsa_maxindex(b);
@@ -110,34 +106,35 @@ bool bsa_tostring(bsa* b, char* str) //trap if string is null and handle gracefu
       return false;
    }
    for(int row = 0; row <= max_indx_rw; row++){ 
-      if(b->p[row]==NULL){
+      if(row_is_null(b, row)){
          sprintf(tmp, "%c%c", OPN_CUR_BR, CLS_CUR_BR); 
+         //printf("tmp 1:%s\n", tmp);
          strcat(str, tmp);
       } 
-      if(b->p[row]!=NULL){
+      if(!row_is_null(b, row)){
          vald_rw_2str(b, str, tmp, row);
       }
    }
    return true;
 } 
-//the print out for null BSA is null string - have I done this?
-
 
 // Clears up all space used
-bool bsa_free(bsa* b)  //if null BSA is passed to this funct, return false
+bool bsa_free(bsa* b)
 { 
- //step through 30 row pointers
-   for(int row = 0; row < MAX_ROW; row++){ 
-      if(b->p[row]!=NULL){
+   if(b == NULL){
+      return false;
+   }
+   for(int row = 0; row < BSA_ROWS; row++){ 
+      if(!row_is_null(b, row)){
          free(b->p[row]);
          b->p[row] = NULL;
       }
    }
-   if(bsa_is_empty(b)==true){
+   if(bsa_is_empty(b)){
       free(b);
       return true;
    }
-   if(bsa_is_empty(b)==false){
+   if(!bsa_is_empty(b)){
       return false; 
    }
    return false;
@@ -146,13 +143,13 @@ bool bsa_free(bsa* b)  //if null BSA is passed to this funct, return false
 // Allow a user-defined function to be applied to each (valid) value 
 // in the array. The user defined 'func' is passed a pointer to an int,
 // and maintains an accumulator of the result where required.
-void bsa_foreach(void (*func)(int* p, int* n), bsa* b, int* acc) //can I reduce the nesting in this function?
+void bsa_foreach(void (*func)(int* p, int* n), bsa* b, int* acc) //can I reduce the nesting in this function? TO DO
 {  
-   for(int row = 0; row < MAX_ROW; row++){ 
-      if(b->p[row]!=NULL){  
+   for(int row = 0; row < BSA_ROWS; row++){ //remove one level of nesting: from 3 to 4, even if it runs a bits slower
+      if(!row_is_null(b, row)){  
          int row_len = k2row_len(row);
          for(int col = 0; col < row_len; col++){ 
-            if(b->p[row][col].set == true){
+            if(cell_is_set(b, row, col)){
                int* ptr = &b->p[row][col].n;
                func(ptr, acc);
             }  
@@ -161,13 +158,15 @@ void bsa_foreach(void (*func)(int* p, int* n), bsa* b, int* acc) //can I reduce 
    }   
 }
 
-
 //incorporate this function into bsa_maxindex (currently, they overlap)
 int maxrowindx(bsa* b, int row)
-{
+{   
+    if(!k_is_valid(row)){
+       return -1;
+    }//test for this case
       int row_len = k2row_len(row);
       for(int col = row_len - 1; col >= 0; col--){
-         if(b->p[row][col].set == true){
+         if(cell_is_set(b, row, col)){
             int row_indx = col; 
             return row_indx;
          }
@@ -179,18 +178,21 @@ void vald_rw_2str(bsa* b, char* str, char* tmp, int row)
 {
    int max_set_cell = maxrowindx(b, row);
    sprintf(tmp, "%c", OPN_CUR_BR); 
+   //printf("tmp 2:%s\n", tmp);
    strcat(str, tmp);
    int row_len = k2row_len(row);
    for(int col = 0 ; col < row_len ; col++){
-      if(b->p[row][col].set == true){ 
+      if(cell_is_set(b, row, col)){ 
          int d = b->p[row][col].n;
          int indx = row_indx2indx(row, col);
          if(col != max_set_cell){
             sprintf(tmp, FMT_ST_SPACE, OPN_SQ_BR, indx, CLS_SQ_BR, EQ, d); //[indx]=d+SPACE
+            //printf("tmp 3:%s\n", tmp);
             strcat(str, tmp);
          }
          if(col == max_set_cell){
             sprintf(tmp, FMT_ST_NSPACE, OPN_SQ_BR, indx, CLS_SQ_BR, EQ, d); //[indx]=d
+            //printf("tmp 4:%s\n", tmp);
             strcat(str, tmp);
          }
       }
@@ -201,28 +203,36 @@ void vald_rw_2str(bsa* b, char* str, char* tmp, int row)
 
 
 int indx2row(int indx)
-{
+{  
+   if(!indx_is_valid(indx)){
+      return -1; //test for this case
+   }
    int shifted = 0;
    int n_shift = 0;
    indx ++; 
-
    while(shifted <= indx){
       shifted = 1<<n_shift; 
       n_shift++; 
    }
-   return n_shift-2; //2 == magic number 
+   return n_shift-SHIFT_OFFSET; 
 }
 
 int max_row_indx(int row)
 {  
+   if(!k_is_valid(row)){
+       return -1;
+   }//test for this case
    int n_shift = row+1; 
    int pow2 = 1<<n_shift;  
-   int max_indx = pow2 - 2; //2 == magic number 
+   int max_indx = pow2 - SHIFT_OFFSET; 
    return max_indx;
 }
 
 int indx2col(int indx)
-{
+{  
+   if(!indx_is_valid(indx)){
+      return -1; //test for this case
+   }
    int row = indx2row(indx);
    int prv_rw_offst = max_row_indx(row-1); 
    int col = indx-prv_rw_offst-1; 
@@ -231,7 +241,7 @@ int indx2col(int indx)
 
 int row_indx2indx(int row, int row_indx)
 {  
-   if(row > 0 && row < MAX_ROW){ 
+   if(row > 0 && row < BSA_ROWS){ 
       int prv_rw = row - 1; 
       int prv_mx_rw_indx = max_row_indx(prv_rw);
       int abs_indx = prv_mx_rw_indx + row_indx + 1; 
@@ -240,12 +250,15 @@ int row_indx2indx(int row, int row_indx)
    if(row == 0){
       return 0;
    }
-   return 1;
+   if(!k_is_valid(row)){
+       return -1;
+    }//test for this case
+   return -1;
 }
 
 //function to get length of row from row number 
 int k2row_len(int k)
-{
+{  
    int len = 1<<k;
    return len;  
 }
@@ -260,12 +273,12 @@ void row_alloc(bsa* b, int row)
 bool bsa_is_empty(bsa* b)
 {
    int cnt = 0; 
-   for(int i = 0; i<MAX_ROW; i++){ 
-      if(b->p[i]==NULL){
+   for(int row = 0; row<BSA_ROWS; row++){ 
+      if(row_is_null(b, row)){
          cnt++;
       } 
    }
-   if(cnt == MAX_ROW){ 
+   if(cnt == BSA_ROWS){ 
       return true;
    }
    else{
@@ -275,9 +288,9 @@ bool bsa_is_empty(bsa* b)
 
 int top_live_row(bsa* b)
 {
-   for(int k=29; k>-1; k--){  //magic nums 29 and -1 
-      if(b->p[k]!=NULL){
-         return k;
+   for(int row=BSA_ROWS - 1; row > - 1; row--){  
+      if(!row_is_null(b, row)){
+         return row;
       } 
    }
    return 0; //does this overlap with case where only 0 is allocated? 
@@ -288,7 +301,7 @@ bool is_row_empty(bsa* b, int row)
    int cnt = 0;
    int row_len = k2row_len(row);
    for(int col = row_len - 1; col > -1; col--){ //magic num
-      if(b->p[row][col].set == true){
+      if(cell_is_set(b, row, col)){
          cnt++; 
       }
    }
@@ -301,16 +314,73 @@ bool is_row_empty(bsa* b, int row)
    return 0;
 }
 
+bool data_inserted(bsa* b, int row, int col, int d)
+{  
+   if(!k_is_valid(row)){
+       return false;
+   }//test for this case
+   if(b == NULL){
+      return false;
+   }
+   b->p[row][col].n = d;
+   b->p[row][col].set = true;
+   return true; 
+}
+
+bool cell_is_set(bsa* b, int row, int col)
+{
+   if(b->p[row][col].set){
+      return true;
+   }
+   if(!b->p[row][col].set){
+      return false;
+   }
+   return 0;
+}
+
+bool row_is_null(bsa* b, int row)
+{
+  if(b->p[row]==NULL){
+     return true;
+  }
+  if(b->p[row]!=NULL){
+     return false;
+  }
+  return 0;
+}
+
+bool k_is_valid(int k)
+{
+   if(k >= 0 && k < BSA_ROWS){
+      return true;
+   }
+   else{
+      return false;
+   }
+}
+
+bool indx_is_valid(int indx)
+{
+   if(indx >= 0 && indx <= MAX_INDEX){
+      return true;
+   }
+   else{
+      return false;
+   }
+}
+
 void test(void)
 {
    //remember to free everything in this test function 
    //think about edge test cases esp for functions in driver.c 
+   //test inserting big numbers 
+    //shouldn't be able to set or get after freeing BSA
    
    //BSA_INIT
    bsa* z = bsa_init(); //do I need to keep changing letters of BSA like this?
    assert(z);
    //check that 30 pointers in empty BSA are null
-   for(int i = 0; i < MAX_ROW; i++){
+   for(int i = 0; i < BSA_ROWS; i++){
       assert(z->p[i]==NULL);
    }
    bsa_free(z);
@@ -576,7 +646,26 @@ void test(void)
    assert(maxrowindx(l, 3)==7); // max set index in row 3 is row index 7 i.e. abs index 14
    bsa_free(l);
   
-   //shouldn't be able to set or get after freeing BSA
+   //K_IS_VALID
+   for(int k=0; k<BSA_ROWS; k++){
+      assert(k_is_valid(k)==true);
+   }
+   assert(k_is_valid(-1)==false); //negative: out of bounds lower
+   assert(k_is_valid(30)==false); //out of bounds higher
+
+   //INDX_IS_VALID
+   assert(indx_is_valid(0)==true);
+   assert(indx_is_valid(1)==true);
+   assert(indx_is_valid(9)==true);
+   assert(indx_is_valid(100)==true);
+   assert(indx_is_valid(600)==true);
+   assert(indx_is_valid(600000)==true);
+   assert(indx_is_valid(900000000)==true);
+   assert(indx_is_valid(MAX_INDEX)==true);
+   assert(indx_is_valid(-1)==false); //negative: out of bounds lower
+   assert(indx_is_valid(MAX_INDEX+1)==false); //out of bounds higher
+ 
+  
 
 }
 
