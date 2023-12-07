@@ -44,3 +44,4 @@ bool cell_is_set(bsa* b, int row, int col);
 bool row_is_null(bsa* b, int row);
 bool k_is_valid(int k);
 bool indx_is_valid(int indx);
+void add(int* p, int* n);
