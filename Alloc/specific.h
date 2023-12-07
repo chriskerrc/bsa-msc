@@ -11,19 +11,20 @@
 #define MAX_INDEX 1073741823-1
 #define SHIFT_OFFSET 2
 #define CHAR_LEN_INT_MAX 10
-#define TMPSTRLEN 3+2*CHAR_LEN_INT_MAX //'[' + ']' + '=' + 2 * LEN_INT_MAX
+//maybe give more space to temp string because this makes me nervous...
+#define TMPSTRLEN 3+2*CHAR_LEN_INT_MAX+1 //'[' + ']' + '=' + 2 * LEN_INT_MAX
 #define TSTSTRLEN 1000
 
-typedef struct col_cell {
+typedef struct cell {
    
    int n;
    bool set; 
 
-}col_cell;
+}cell;
 
 struct bsa {
 
-   col_cell *p[BSA_ROWS]; //array of 30 col_cell pointers 
+   cell *p[BSA_ROWS]; //array of 30 col_cell pointers 
 
 }; 
 
@@ -36,7 +37,7 @@ bool bsa_is_empty(bsa* b);
 int top_live_row(bsa* b); // return number highest allocated rowcd .
 int row_indx2indx(int row, int row_indx); //go from index in row to absolute index
 bool is_row_empty(bsa* b, int row); // true if no element of row is set
-int maxrowindx(bsa* b, int row);
+int max_set_row_indx(bsa* b, int row);
 void vald_rw_2str(bsa* b, char* str, char* tmp, int row); // sub-function for 2 string l
 bool data_inserted(bsa* b, int row, int col, int d);
 bool cell_is_set(bsa* b, int row, int col);

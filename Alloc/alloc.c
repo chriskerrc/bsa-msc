@@ -1,6 +1,8 @@
 #include "../bsa.h"
 #include "specific.h"
-
+//DOUBLE CHECK WHAT FILES WE INCLUDE IN .zip
+//minimise use of bounds checking function
+//make naming consistent
 bsa* bsa_init(void)
 {
    bsa* b = (bsa*) calloc(1, sizeof(bsa)); //calloc sets pointers to NULL i.e. pointer to zero is null pointer 
@@ -82,7 +84,7 @@ int bsa_maxindex(bsa* b)
    }
    if(!bsa_is_empty(b)){
       int row = top_live_row(b); //get highest allocated row
-      int max_row_indx = maxrowindx(b, row);
+      int max_row_indx = max_set_row_indx(b, row);
       int max_indx = row_indx2indx(row, max_row_indx);
       return max_indx;
    }
@@ -159,7 +161,7 @@ void bsa_foreach(void (*func)(int* p, int* n), bsa* b, int* acc) //can I reduce 
 }
 
 //incorporate this function into bsa_maxindex (currently, they overlap)
-int maxrowindx(bsa* b, int row)
+int max_set_row_indx(bsa* b, int row)
 {   
     if(!k_is_valid(row)){
        return -1;
@@ -176,7 +178,7 @@ int maxrowindx(bsa* b, int row)
 
 void vald_rw_2str(bsa* b, char* str, char* tmp, int row)
 {
-   int max_set_cell = maxrowindx(b, row);
+   int max_set_cell = max_set_row_indx(b, row);
    sprintf(tmp, "%c", OPN_CUR_BR); 
    //printf("tmp 2:%s\n", tmp);
    strcat(str, tmp);
@@ -205,7 +207,7 @@ void vald_rw_2str(bsa* b, char* str, char* tmp, int row)
 int indx2row(int indx)
 {  
    if(!indx_is_valid(indx)){
-      return -1; //test for this case
+      return -1; 
    }
    int shifted = 0;
    int n_shift = 0;
@@ -221,7 +223,7 @@ int max_row_indx(int row)
 {  
    if(!k_is_valid(row)){
        return -1;
-   }//test for this case
+   }
    int n_shift = row+1; 
    int pow2 = 1<<n_shift;  
    int max_indx = pow2 - SHIFT_OFFSET; 
@@ -231,7 +233,7 @@ int max_row_indx(int row)
 int indx2col(int indx)
 {  
    if(!indx_is_valid(indx)){
-      return -1; //test for this case
+      return -1; 
    }
    int row = indx2row(indx);
    int prv_rw_offst = max_row_indx(row-1); 
@@ -267,7 +269,7 @@ int k2row_len(int k)
 void row_alloc(bsa* b, int row)
 { 
    int row_len = k2row_len(row);
-   b->p[row] = (col_cell*) calloc(row_len, sizeof(col_cell));
+   b->p[row] = (cell*) calloc(row_len, sizeof(cell));
 }
 
 bool bsa_is_empty(bsa* b)
@@ -288,12 +290,15 @@ bool bsa_is_empty(bsa* b)
 
 int top_live_row(bsa* b)
 {
+   if(bsa_is_empty(b)){
+      return -1;
+   }
    for(int row=BSA_ROWS - 1; row > - 1; row--){  
       if(!row_is_null(b, row)){
          return row;
       } 
    }
-   return 0; //does this overlap with case where only 0 is allocated? 
+   return -1; 
 }
 
 bool is_row_empty(bsa* b, int row)
@@ -371,17 +376,16 @@ bool indx_is_valid(int indx)
 
 void test(void)
 {
-   //remember to free everything in this test function 
    //think about edge test cases esp for functions in driver.c 
-   //test inserting big numbers 
+   //test inserting, setting, getting, stringing big numbers 
     //shouldn't be able to set or get after freeing BSA
    
    //BSA_INIT
-   bsa* z = bsa_init(); //do I need to keep changing letters of BSA like this?
+   bsa* z = bsa_init();
    assert(z);
    //check that 30 pointers in empty BSA are null
    for(int i = 0; i < BSA_ROWS; i++){
-      assert(z->p[i]==NULL);
+      assert(row_is_null(z, i));
    }
    bsa_free(z);
 
@@ -392,39 +396,75 @@ void test(void)
    assert(f);
    row_alloc(f, 0); 
    int len = k2row_len(0); //length is 1
-   assert(f->p[0]!=NULL); //check row 0 pointer is pointing to array
-   for(int c = 0; c < len; c++){
-      assert(f->p[0][c].n == 0); //check calloc has flood-filled with zeros
-      assert(f->p[0][c].set == 0);
+   assert(!row_is_null(f, 0)); //check row 0 pointer is pointing to array
+   for(int col = 0; col < len; col++){
+      assert(f->p[0][col].n == 0); //check calloc has flood-filled with zeros
+      assert(f->p[0][col].set == 0);
    }
    bsa_free(f);
+ 
+   //allocate row 1
+   bsa* q = bsa_init();
+   assert(q);
+   row_alloc(q, 1); 
+   len = k2row_len(1); //length is 2
+   assert(!row_is_null(q, 1)); //check row 1 pointer is pointing to array
+   for(int c = 0; c < len; c++){
+      assert(q->p[1][c].n == 0);
+      assert(q->p[1][c].set == 0);
+   }
+   bsa_free(q);
 
    //allocate row 2
    bsa* g = bsa_init();
    assert(g);
    row_alloc(g, 2); 
    len = k2row_len(2); //length is 4
-   assert(g->p[2]!=NULL); //check row 2 pointer is pointing to array
+   assert(!row_is_null(g, 2)); //check row 2 pointer is pointing to array
    for(int c = 0; c < len; c++){
       assert(g->p[2][c].n == 0);
       assert(g->p[2][c].set == 0);
    }
    bsa_free(g);
 
+   //allocate row 10
+   bsa* r = bsa_init();
+   assert(r);
+   row_alloc(r, 10); 
+   len = k2row_len(10); 
+   assert(!row_is_null(r, 10)); 
+   for(int c = 0; c < len; c++){
+      assert(r->p[10][c].n == 0);
+      assert(r->p[10][c].set == 0);
+   }
+   bsa_free(r);
+
    //allocate row 17
    bsa* h = bsa_init();
    assert(h);
    row_alloc(h, 17); 
    len = k2row_len(17); //length is 131072
-   assert(h->p[17]!=NULL); //check row 2 pointer is pointing to array
+   assert(!row_is_null(h, 17)); //check row 2 pointer is pointing to array
    for(int c = 0; c < len; c++){
       assert(h->p[17][c].n == 0);
       assert(h->p[17][c].set == 0);
    }
    bsa_free(h);
+
+   //allocate row 29
+   bsa* s = bsa_init();
+   assert(s);
+   row_alloc(s, 29); 
+   len = k2row_len(29); 
+   assert(!row_is_null(s, 29)); 
+   for(int c = 0; c < len; c++){
+      assert(s->p[29][c].n == 0);
+      assert(s->p[29][c].set == 0);
+   }
+   bsa_free(s);
    
 
-   //N2ROW_LEN
+   //K2ROW_LEN
 
    assert(k2row_len(0)==1); 
    assert(k2row_len(1)==2); 
@@ -459,7 +499,9 @@ void test(void)
 
    //INDEX2ROW
  
-   //what about negative index? - define what this function does, and have function to ensure it's positive? 
+   assert(indx2row(-1)==-1); //negative index returns -1
+   assert(indx2row(1073741823)==-1); //index above max returns -1
+   assert(indx2row(-1)==-1);
    assert(indx2row(0)==0); //exhaustive testing for first few rows
    assert(indx2row(1)==1);
    assert(indx2row(2)==1);
@@ -488,10 +530,75 @@ void test(void)
    assert(indx2row(180)==7); //middle
    assert(indx2row(254)==7); //last
    assert(indx2row(255)==8); //first 
-   //KEEP GOING UP TO 29 .............................
+   assert(indx2row(400)==8); //middle
+   assert(indx2row(510)==8); //last
+   assert(indx2row(511)==9); //first 
+   assert(indx2row(700)==9); //middle
+   assert(indx2row(1022)==9); //last
+   assert(indx2row(1023)==10); //first 
+   assert(indx2row(2000)==10); //middle
+   assert(indx2row(2046)==10); //last
+   assert(indx2row(2047)==11); //first 
+   assert(indx2row(3000)==11); //middle
+   assert(indx2row(4094)==11); //last
+   assert(indx2row(4095)==12); //first 
+   assert(indx2row(6000)==12); //middle
+   assert(indx2row(8190)==12); //last
+   assert(indx2row(8191)==13); //first 
+   assert(indx2row(10000)==13); //middle
+   assert(indx2row(16382)==13); //last
+   assert(indx2row(16383)==14); //first 
+   assert(indx2row(18000)==14); //middle
+   assert(indx2row(32766)==14); //last
+   assert(indx2row(32767)==15); //first 
+   assert(indx2row(34000)==15); //middle
+   assert(indx2row(65534)==15); //last
+   assert(indx2row(65535)==16); //first 
+   assert(indx2row(80000)==16); //middle
+   assert(indx2row(131070)==16); //last
+   assert(indx2row(131071)==17); //first 
+   assert(indx2row(150000)==17); //middle
+   assert(indx2row(262142)==17); //last
+   assert(indx2row(262143)==18); //first 
+   assert(indx2row(300000)==18); //middle
+   assert(indx2row(524286)==18); //last
+   assert(indx2row(524287)==19); //first 
+   assert(indx2row(624287)==19); //middle
+   assert(indx2row(1048574)==19); //last
+   assert(indx2row(1048575)==20); //first 
+   assert(indx2row(1049999)==20); //middle
+   assert(indx2row(2097150)==20); //last
+   assert(indx2row(2097151)==21); //first 
+   assert(indx2row(2099999)==21); //middle
+   assert(indx2row(4194302)==21); //last
+   assert(indx2row(4194303)==22); //first 
+   assert(indx2row(4999999)==22); //middle
+   assert(indx2row(8388606)==22); //last 
+   assert(indx2row(8388607)==23); //first 
+   assert(indx2row(8399999)==23); //middle
+   assert(indx2row(16777214)==23); //last
+   assert(indx2row(16777215)==24); //first 
+   assert(indx2row(16787215)==24); //middle
+   assert(indx2row(33554430)==24); //last
+   assert(indx2row(33554431)==25); //first 
+   assert(indx2row(33999999)==25); //middle
+   assert(indx2row(67108862)==25); //last
+   assert(indx2row(67108863)==26); //first 
+   assert(indx2row(67109999)==26); //middle
+   assert(indx2row(134217726)==26); //last
+   assert(indx2row(134217727)==27); //first 
+   assert(indx2row(134219999)==27); //middle
+   assert(indx2row(268435454)==27); //last
+   assert(indx2row(268435455)==28); //first 
+   assert(indx2row(268999999)==28); //middle
+   assert(indx2row(536870910)==28); //last
+   assert(indx2row(536870911)==29); //first 
+   assert(indx2row(536999999)==29); //middle
+   assert(indx2row(1073741822)==29); //last
    
    //MAX_ROW_INDX
    
+   assert(max_row_indx(-1)==-1); //invalid row returns -1
    assert(max_row_indx(0)==0);
    assert(max_row_indx(1)==2);
    assert(max_row_indx(2)==6);
@@ -500,10 +607,34 @@ void test(void)
    assert(max_row_indx(5)==62);
    assert(max_row_indx(6)==126);
    assert(max_row_indx(7)==254);
-   //KEEP GOING UP TO 29 .............................
+   assert(max_row_indx(8)==510);
+   assert(max_row_indx(9)==1022);
+   assert(max_row_indx(10)==2046);
+   assert(max_row_indx(11)==4094);
+   assert(max_row_indx(12)==8190);
+   assert(max_row_indx(13)==16382);
+   assert(max_row_indx(14)==32766);
+   assert(max_row_indx(15)==65534);
+   assert(max_row_indx(16)==131070);
+   assert(max_row_indx(17)==262142);
+   assert(max_row_indx(18)==524286);
+   assert(max_row_indx(19)==1048574);
+   assert(max_row_indx(20)==2097150);
+   assert(max_row_indx(21)==4194302);
+   assert(max_row_indx(22)==8388606);
+   assert(max_row_indx(23)==16777214);
+   assert(max_row_indx(24)==33554430);
+   assert(max_row_indx(25)==67108862);
+   assert(max_row_indx(26)==134217726);
+   assert(max_row_indx(27)==268435454);
+   assert(max_row_indx(28)==536870910);
+   assert(max_row_indx(29)==1073741822);
+   assert(max_row_indx(30)==-1); //invalid row returns -1
 
    //INDX2COL 
    
+   assert(indx2col(-5)==-1); //negative index returns -1
+   assert(indx2col(1073741823)==-1); //index too high returns -1
    assert(indx2col(0)==0);
    assert(indx2col(1)==0);
    assert(indx2col(2)==1);
@@ -520,38 +651,66 @@ void test(void)
    assert(indx2col(13)==6);
    assert(indx2col(14)==7);
    assert(indx2col(15)==0); //first indx in row 4
+   assert(indx2col(16)==1); //second indx in row 4
    assert(indx2col(30)==15); //last indx in row 4
    assert(indx2col(31)==0); //first indx in row 5
+   assert(indx2col(35)==4); //4th indx in row 5
    assert(indx2col(62)==31); //last indx in row 5
    assert(indx2col(63)==0); //first indx in row 6
+   assert(indx2col(69)==6); //6th indx in row 6
    assert(indx2col(126)==63); //last indx in row 6
    assert(indx2col(127)==0);//first indx in row 7
-   assert(indx2col(254)==127);//first indx in row 7
-   
-   //KEEP GOING UP TO 29 .............................
-   //and add middle index tests above
+   assert(indx2col(137)==10);//10th indx in row 7
+   assert(indx2col(254)==127);//last indx in row 7
+   assert(indx2col(255)==0);//first indx in row 8
+   assert(indx2col(510)==255); //last index row 8
+   assert(indx2col(511)==0); //first index row 9
+   assert(indx2col(1022)==511); //last index row 9
+   assert(indx2col(2046)==1023); //last index row 10
+   assert(indx2col(4094)==2047); //last index row 11
+   assert(indx2col(8190)==4095); //last index row 12
+   assert(indx2col(16382)==8191); //last index row 13
+   assert(indx2col(32766)==16383); //last index row 14
+   assert(indx2col(65534)==32767); //last index row 15
+   assert(indx2col(131070)==65535); //last index row 16
+   assert(indx2col(262142)==131071); //last index row 17
+   assert(indx2col(524286)==262143); //last index row 18
+   assert(indx2col(1048574)==524287); //last index row 19
+   assert(indx2col(2097150)==1048575); //last index row 20
+   assert(indx2col(4194302)==2097151); //last index row 21
+   assert(indx2col(8388606)==4194303); //last index row 22
+   assert(indx2col(16777214)==8388607); //last index row 23
+   assert(indx2col(33554430)==16777215); //last index row 24
+   assert(indx2col(67108862)==33554431); //last index row 25
+   assert(indx2col(134217726)==67108863); //last index row 26
+   assert(indx2col(268435454)==134217727); //last index row 27
+   assert(indx2col(536870910)==268435455); //last index row 28
+   assert(indx2col(1073741822)==536870911); //last index row 29
 
    //BSA_IS_EMPTY
-   
    bsa* c = bsa_init(); //empty BSA
-   assert(c);
    assert(bsa_is_empty(c)==true);
    row_alloc(c, 0); //allocate one row: BSA not empty
    assert(bsa_is_empty(c)==false); 
    bsa_free(c);
    
-   
    //TOP_LIVE_ROW
    bsa* d = bsa_init();
+   assert(top_live_row(d)==-1); //returns -1 for empty BSA i.e. no live rows
    row_alloc(d, 0); //allocate row 0
    assert(top_live_row(d)==0);
+   row_alloc(d, 1); //allocate row 1
+   assert(top_live_row(d)==1);
    row_alloc(d, 5); //allocate row 5
    assert(top_live_row(d)==5);
+   row_alloc(d, 10); //allocate row 10
+   assert(top_live_row(d)==10);
    row_alloc(d, 17); //allocate row 17
    assert(top_live_row(d)==17);
+   row_alloc(d, 25); //allocate row 25
+   assert(top_live_row(d)==25);
    row_alloc(d, 29); //allocate row 29
    assert(top_live_row(d)==29);
-   //add more testing
    bsa_free(d);
 
    //ROW_INDX2INDX
@@ -634,16 +793,16 @@ void test(void)
    bsa_free(o);
    strcpy(tst, "");
 
-   //MAX_ROW_INDX
+   //MAX_SET_ROW_INDX
    bsa* l = bsa_init();
    assert(l);
    bsa_set(l, 8, 4); //set index 8 to 4
    bsa_set(l, 10, 5); //set index 10 to 5
-   assert(maxrowindx(l, 3)==3); // max set index in row 3 is row index 3 i.e. abs index 10
+   assert(max_set_row_indx(l, 3)==3); // max set index in row 3 is row index 3 i.e. abs index 10
    bsa_set(l, 13, 7); //set index 13 to 6
-   assert(maxrowindx(l, 3)==6); // max set index in row 3 is row index 6 i.e. abs index 13
+   assert(max_set_row_indx(l, 3)==6); // max set index in row 3 is row index 6 i.e. abs index 13
    bsa_set(l, 14, 12); //set index 14 to 12
-   assert(maxrowindx(l, 3)==7); // max set index in row 3 is row index 7 i.e. abs index 14
+   assert(max_set_row_indx(l, 3)==7); // max set index in row 3 is row index 7 i.e. abs index 14
    bsa_free(l);
   
    //K_IS_VALID
@@ -666,7 +825,28 @@ void test(void)
    assert(indx_is_valid(MAX_INDEX+1)==false); //out of bounds higher
  
   
+   /*
+    int row_indx2indx(int row, int row_indx); //go from index in row to absolute index
+     bool is_row_empty(bsa* b, int row); // true if no element of row is set
+    int max_set_row_indx(bsa* b, int row);
+      void vald_rw_2str(bsa* b, char* str, char* tmp, int row); // sub-function for 2 string l
+    bool data_inserted(bsa* b, int row, int col, int d);
+    bool cell_is_set(bsa* b, int row, int col);
+    bool row_is_null(bsa* b, int row);
 
+    //Neill's functions
+    bsa* bsa_init(void);
+    bool bsa_set(bsa* b, int indx, int d);
+    int* bsa_get(bsa* b, int indx);
+    bool bsa_delete(bsa* b, int indx);
+    int bsa_maxindex(bsa* b);
+    bool bsa_tostring(bsa* b, char* str);
+    bool bsa_free(bsa* b);
+    void bsa_foreach(void (*func)(int* p, int* n), bsa* b, int* acc);
+    //write function to add numbers 
+
+
+   */
 }
 
 
