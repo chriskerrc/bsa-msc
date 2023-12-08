@@ -363,303 +363,408 @@ void add(int* p, int* n)
 
 void test(void)
 {  
+   char tst[TSTSTRLEN];
+   char tmp[TMPSTRLEN] = {'\0'};  
+   //** MEMORY ALLOCATION AND FREEING TESTS **
+  
+   //* EMPTY BSA *
+
    //BSA_INIT
-   bsa* z = bsa_init();
-   assert(z);
+   bsa* b = bsa_init();
+   assert(b);
    //check that 30 pointers in empty BSA are null
    for(int i = 0; i < BSA_ROWS; i++){
-      assert(row_is_null(z, i));
+      assert(row_is_null(b, i));
    }
-   bsa_free(z);
    
-   //BSA_SET
+   //BSA_IS_EMPTY
+   assert(bsa_is_empty(b)==true);
 
-   //set big int 
-   bsa* u = bsa_init();
-   assert(bsa_set(u, 5, 1234567890)); //set integer 10 digits long
-   assert(bsa_maxindex(u)==5);
-   
-   //reset existing big value 
-   assert(bsa_set(u, 5, 1234567891));
-   
-   //check value has been set
-   int* a = bsa_get(u, 5);
-   assert(*a == 1234567891);
-   bsa_free(u);
+   //BSA_MAXINDEX
+   assert(bsa_maxindex(b)==-1); //returns -1 for empty BSA
 
-   //try to set NULL BSA
-   bsa* v = NULL;
-   assert(!bsa_set(v, 5, 12)); //returns false when try set NULL BSA
+   //BSA_TOSTRING
+   //empty BSA, no rows set i.e. BSA max index == -1
+   bsa_tostring(b, tst);
+   assert(strcmp(tst, "")==0);
+   strcpy(tst, "");
    
    //DATA_INSERTED
    
    //returns false when try insert data into NULL BSA
-   assert(!data_inserted(v, 2, 2, 1234567890));
-   bsa_free(v);
+   assert(!data_inserted(b, 2, 2, 1234567890));
 
-   bsa* w = bsa_init();
-   assert(w);
-
-   //returns false when try insert data into NULL row 
-   assert(!data_inserted(w, 3, 2, 1234567891));
+   //ROW_IS_NULL
+   for(int row = 0; row < BSA_ROWS; row++){
+      assert(row_is_null(b, row));
+   }
    
-   allocate_row(w, 2); //allocate row 2
+   //TOP_LIVE_ROW
+   assert(top_live_row(b)==-1); //returns -1 for empty BSA i.e. no live rows
+
+   //* ALLOCATE EMPTY ROW *
+
+   allocate_row(b, 0); //allocate one row: BSA not empty
+   //BSA_IS_EMPTY
+   assert(bsa_is_empty(b)==false); 
+
+   //TOP_LIVE_ROW
+   assert(top_live_row(b)==0);
+
+   //* SETTING *
+   
+   //BSA_SET
+
+   //Set small data value at index 0
+   assert(bsa_set(b, 0, 10));
+   assert(bsa_maxindex(b)==0);
+   assert(max_set_row_indx(b, 0)==0); // max set index in row 0 is row index 0 i.e. abs index 0
+
+   //BSA_TOSTRING
+   //one set element & stop printing rows after max index 
+   bsa_tostring(b, tst);
+   assert(strcmp(tst, "{[0]=10}")==0);
+   strcpy(tst, "");
+   
+   //VALID_ROW_TO_STRING
+   //row 0
+   valid_row_to_string(b, tst, tmp, 0); 
+   assert(strcmp(tst, "{[0]=10}")==0);
+   strcpy(tst, "");
+  
+   //Set big data value at index 5
+   //Allocates row 2
+   assert(bsa_set(b, 5, 1234567890)); //set integer 10 digits long
+   assert(bsa_maxindex(b)==5);
+   assert(max_set_row_indx(b, 2)==2); // max set index in row 2 is row index 2 i.e. abs index 5
  
+   //BSA_TOSTRING
+   //Two set elements, different rows
+   bsa_tostring(b, tst);
+   assert(strcmp(tst, "{[0]=10}{}{[5]=1234567890}")==0);
+   strcpy(tst, "");
+
+   //VALID_ROW_TO_STRING
+   //row 2
+   valid_row_to_string(b, tst, tmp, 2); 
+   assert(strcmp(tst, "{[5]=1234567890}")==0);
+   strcpy(tst, "");
+
+   //ROW_IS_NULL
+   assert(!row_is_null(b, 2)); // row 2 is not null
+   
+   //IS_ROW_EMPTY
+   assert(is_row_empty(b, 2)==false);
+
+   //reset existing big value at index 5
+   assert(bsa_set(b, 5, 1234567891));
+
+   //Two set elements, check value has changed
+   bsa_tostring(b, tst);
+   assert(strcmp(tst, "{[0]=10}{}{[5]=1234567891}")==0);
+   strcpy(tst, "");
+   
+   //BSA_GET
+   //check value has been set at index 5
+   int* a = bsa_get(b, 5);
+   assert(*a == 1234567891);
+   
+   //ALLOCATE_ROW
+   allocate_row(b, 3); //allocate row 3 without setting anything
+   //IS_ROW_EMPTY
+   assert(is_row_empty(b, 3)==true);
+
+   //TOP_LIVE_ROW
+   assert(top_live_row(b)==3);
+
+   //ROW_IS_NULL
+   assert(!row_is_null(b, 3)); // row 3 is not null
+
+   //DATA_INSERTED
    //returns false when try insert in invalid row
-   assert(!data_inserted(w, -1, 2, 1234567891));
- 
-   //returns true when insert data in valid row 2
-   assert(data_inserted(w, 2, 2, 1234599999));
-   
+   assert(!data_inserted(b, -1, 2, 1234567891));
+  
+   //returns true when insert data in valid row 3 abs index 9
+   assert(data_inserted(b, 3, 2, 1234599999));
+
+   //* GETTING *
+
+   //BSA_GET
    //check value has been set
-   a = bsa_get(w, 5);
+   a = bsa_get(b, 9);
    assert(*a == 1234599999);
+   assert(bsa_maxindex(b)==9);
+   assert(max_set_row_indx(b, 3)==2); // max set index in row 3 is row index 2 i.e. abs index 9
+
+   //BSA_TOSTRING
+   //Three set elements, three rows
+   bsa_tostring(b, tst);
+   assert(strcmp(tst, "{[0]=10}{}{[5]=1234567891}{[9]=1234599999}")==0);
+   strcpy(tst, "");
+
+   //VALID_ROW_TO_STRING
+   //row 2
+   valid_row_to_string(b, tst, tmp, 2); 
+   assert(strcmp(tst, "{[5]=1234567891}")==0);
+   strcpy(tst, "");
 
    //CELL_IS_SET
    
    //check value has been set 
-   assert(cell_is_set(w, 2, 2));
-   //returns false for unset ccell 
-   assert(!cell_is_set(w, 2, 3));
-   
-   bsa_free(w);
+   assert(cell_is_set(b, 3, 2)); //abs index 9 is set
+   //returns false for unset cell 
+   assert(!cell_is_set(b, 3, 3)); //nothing set at abs index 10
 
    //BSA_GET
     
-   bsa* x = bsa_init();
-   //set a big value 
-   assert(bsa_set(x, 11, 1111111111));
-
-   //get big value
-   a = bsa_get(x, 11);
-   assert(*a == 1111111111);
-
-   //set big value last cell of BSA row 29
-   assert(bsa_set(x, 1073741822, 1111111112));
-
-   //get big value last cell of BSA row 29
-   a = bsa_get(x, 1073741822);
-   assert(*a == 1111111112);
-   
-   bsa_free(x);
-    
-   //BSA_DELETE
-   bsa* y = bsa_init();
-   bsa_set(y, 11, 9); //allocate row 3 and set index 11 to "9"
-   
-   //try delete at invalid index
-   assert(!bsa_delete(y, -1)); //invalid index low 
-   assert(!bsa_delete(y, 1073741823)); //invalid index high
-  
-   //try delete unset cell
-   assert(!bsa_delete(y, 12));
-   
-   //delete set cell
-   bsa_set(y, 1073741822, 999000); //set last cell in row 29
-   assert(bsa_maxindex(y)==1073741822); 
-   assert(bsa_delete(y, 1073741822)); //delete last cell row 29
-   assert(bsa_maxindex(y)==11); 
-   bsa_free(y);
-
-   //BSA_MAX_INDEX
-   bsa* aa = NULL;
-   assert(bsa_maxindex(aa)==-1); //returns -1 for NULL BSA
-   aa = bsa_init();
-   assert(bsa_maxindex(aa)==-1); //returns -1 for empty BSA
-   bsa_set(aa, 0, 999000);
-   assert(bsa_maxindex(aa)==0);
-   bsa_set(aa, 5, 999000);
-   assert(bsa_maxindex(aa)==5);
-   bsa_set(aa, 17899, 999000);
-   assert(bsa_maxindex(aa)==17899);
-   bsa_set(aa, 1073741822, 999000);
-   assert(bsa_maxindex(aa)==1073741822);
-   bsa_free(aa);
+   //set a big value at abs index 11
+   assert(bsa_set(b, 11, 1111111111));
+   assert(bsa_maxindex(b)==11);
+   assert(max_set_row_indx(b, 3)==4); // max set index in row 3 is row index 4 i.e. abs index 11
 
    //BSA_TOSTRING
-   
-   char tst[TSTSTRLEN];
-   
-   //empty BSA, no rows set i.e. BSA max index == -1
-   bsa* i = bsa_init();   
-   bsa_tostring(i, tst);
-   assert(strcmp(tst, "")==0);
-   free(i);
-   strcpy(tst, "");
-
-   //one set element & stop printing rows after max index 
-   bsa* j = bsa_init();
-   bsa_set(j, 4, 9); //set "9" at index 4, row 2
-   bsa_tostring(j, tst);
-   assert(strcmp(tst, "{}{}{[4]=9}")==0); 
-   bsa_free(j);
-   strcpy(tst, "");
-  
-   //two elements set as only element in two rows
-   bsa* k = bsa_init();
-   assert(k);
-   assert(bsa_set(k, 0, 4));
-   assert(bsa_set(k, 0, 0));
-   assert(bsa_set(k, 15, 15));
-   assert(bsa_tostring(k, tst));
-   assert(strcmp(tst, "{[0]=0}{}{}{}{[15]=15}")==0);
-   bsa_free(k);
-   strcpy(tst, "");
-            
-   //two set elements same row
-   bsa* m = bsa_init();
-   bsa_set(m, 1, 1); //set "1" at index 1, row 1
-   bsa_set(m, 2, 2); //set "2" at index 2, row 1
-   bsa_set(m, 3, 3); //set "3" at index 3, row 2
-   bsa_tostring(m, tst);
-   assert(strcmp(tst, "{}{[1]=1 [2]=2}{[3]=3}")==0);
-   bsa_free(m);
-   strcpy(tst, "");
-
-   //three elements same row
-   bsa* n = bsa_init();
-   bsa_set(n, 3, 9); //set "9" at index 3, row 2
-   bsa_set(n, 4, 10); //set "10" at index 4, row 2
-   bsa_set(n, 5, 11); //set "11" at index 5, row 2
-   bsa_tostring(n, tst);
-   assert(strcmp(tst, "{}{}{[3]=9 [4]=10 [5]=11}")==0);
-   bsa_free(n);
-   strcpy(tst, "");
- 
-   //two set elements  per row on two different rows
-   bsa* o = bsa_init();
-   bsa_set(o, 1, 5); //set "1" at index 1, row 1
-   bsa_set(o, 2, 6); //set "2" at index 2, row 1
-   bsa_set(o, 3, 7); //set "3" at index 3, row 2
-   bsa_set(o, 4, 8); //set "3" at index 4, row 2
-   bsa_tostring(o, tst);
-   assert(strcmp(tst, "{}{[1]=5 [2]=6}{[3]=7 [4]=8}")==0);
-   bsa_free(o);
-   strcpy(tst, "");
-
-   //two set elements  per row on two different rows big d values
-   bsa* ab = bsa_init();
-   bsa_set(ab, 1, 1234567891); //set "1" at index 1, row 1
-   bsa_set(ab, 2, 1234567892); //set "2" at index 2, row 1
-   bsa_set(ab, 3, 1234567893); //set "3" at index 3, row 2
-   bsa_set(ab, 4, 1234567894); //set "3" at index 4, row 2
-   bsa_tostring(ab, tst);
-   assert(strcmp(tst, "{}{[1]=1234567891 [2]=1234567892}{[3]=1234567893 [4]=1234567894}")==0);
-   bsa_free(ab);
-   strcpy(tst, "");
-
-   //three elements same row big d values
-   bsa* ac = bsa_init();
-   bsa_set(ac, 3, 1234567891); //set "9" at index 3, row 2
-   bsa_set(ac, 4, 1234567892); //set "10" at index 4, row 2
-   bsa_set(ac, 5, 1234567893); //set "11" at index 5, row 2
-   bsa_tostring(ac, tst);
-   assert(strcmp(tst, "{}{}{[3]=1234567891 [4]=1234567892 [5]=1234567893}")==0);
-   bsa_free(ac);
+   //Four set elements, two in row 3, space between set elements in same row
+   bsa_tostring(b, tst);
+   assert(strcmp(tst, "{[0]=10}{}{[5]=1234567891}{[9]=1234599999 [11]=1111111111}")==0);
    strcpy(tst, "");
    
    //VALID_ROW_TO_STRING
-   char tmp[TMPSTRLEN] = {'\0'};  
-
-   bsa* ad = bsa_init();
-   bsa_set(ad, 3, 1234567891); //set "9" at index 3, row 2
-   //print row with 1 set element 
-   valid_row_to_string(ad, tst, tmp, 2); 
-   assert(strcmp(tst, "{[3]=1234567891}")==0);
+   //row 3
+   valid_row_to_string(b, tst, tmp, 3); 
+   assert(strcmp(tst, "{[9]=1234599999 [11]=1111111111}")==0);
    strcpy(tst, "");
-   bsa_set(ad, 4, 1234567892); //set "10" at index 4, row 2
-   //print row with 2 set elements 
-   valid_row_to_string(ad, tst, tmp, 2); 
-   assert(strcmp(tst, "{[3]=1234567891 [4]=1234567892}")==0);
-   strcpy(tst, "");
-   bsa_free(ad);
 
+   //BSA_DELETE
+   //delete set cell index 5
+   assert(bsa_delete(b, 5)); 
+   
+   //BSA_TOSTRING
+   //Check element at index 5 is gone
+   bsa_tostring(b, tst);
+   assert(strcmp(tst, "{[0]=10}{}{}{[9]=1234599999 [11]=1111111111}")==0);
+   strcpy(tst, "");
+
+   //BSA_GET
+
+   //get big value
+   a = bsa_get(b, 11);
+   assert(*a == 1111111111);
+
+   //set big value last cell of BSA row 29
+   assert(bsa_set(b, 1073741822, 1111111112));
+   assert(bsa_maxindex(b)==1073741822);
+
+   //TOP_LIVE_ROW 
+   assert(top_live_row(b)==29);
+
+   //BSA_GET
+
+   //get big value last cell of BSA row 29
+   a = bsa_get(b, 1073741822);
+   assert(*a == 1111111112);
+  
+   //* DELETING *
+
+   //BSA_DELETE
+ 
+   //try delete at invalid index
+   assert(!bsa_delete(b, -1)); //invalid index low 
+   assert(!bsa_delete(b, 1073741823)); //invalid index high
+   
+   //try delete unset cell: nothing set at abs indx 12
+   assert(!bsa_delete(b, 12));
+   
+   //delete set cell index 11
+   assert(bsa_delete(b, 11)); 
+   
+   //CELL_IS_SET
+   //returns false for deleted cell 
+   assert(!cell_is_set(b, 3, 4)); //abs index 11
+ 
+   //* FREEING *
+
+   bsa_free(b);
+   
+   //** FOREACH **
+   
    //BSA_FOREACH & ADD
 
-   bsa* ae = bsa_init();
-   bsa_set(ae, 1, 1);
-   bsa_set(ae, 2, 2);
-   bsa_set(ae, 3, 4);
+   bsa* c = bsa_init();
+   bsa_set(c, 1, 1);
+   bsa_set(c, 2, 2);
+   bsa_set(c, 3, 4);
    int acc = 0;
-   bsa_foreach(add, ae, &acc);
+   bsa_foreach(add, c, &acc);
    assert(acc==7);
-   bsa_free(ae);
+   bsa_free(c);
 
-   //ALLOCATE_ROW
+   //** NULL BSA TESTS **
+
+   //BSA_SET
+
+   //try to set NULL BSA
+   bsa* d = NULL;
+   assert(!bsa_set(d, 5, 12)); //returns false when try set NULL BSA
    
-   //allocate row 0
-   bsa* f = bsa_init();
-   assert(f);
-   allocate_row(f, 0); 
-   int len = k_to_row_len(0); //length is 1
-   assert(!row_is_null(f, 0)); //check row 0 pointer is pointing to array
-   for(int col = 0; col < len; col++){
-      assert(f->p[0][col].n == 0); //check calloc has flood-filled with zeros
-      assert(f->p[0][col].set == 0);
-   }
-   bsa_free(f);
- 
-   //allocate row 1
-   bsa* q = bsa_init();
-   assert(q);
-   allocate_row(q, 1); 
-   len = k_to_row_len(1); //length is 2
-   assert(!row_is_null(q, 1)); //check row 1 pointer is pointing to array
-   for(int c = 0; c < len; c++){
-      assert(q->p[1][c].n == 0);
-      assert(q->p[1][c].set == 0);
-   }
-   bsa_free(q);
+   //DATA_INSERTED
 
-   //allocate row 2
-   bsa* g = bsa_init();
-   assert(g);
-   allocate_row(g, 2); 
-   len = k_to_row_len(2); //length is 4
-   assert(!row_is_null(g, 2)); //check row 2 pointer is pointing to array
-   for(int c = 0; c < len; c++){
-      assert(g->p[2][c].n == 0);
-      assert(g->p[2][c].set == 0);
-   }
-   bsa_free(g);
+   d = bsa_init(); //Initialize BSA d
 
-   //allocate row 10
-   bsa* r = bsa_init();
-   assert(r);
-   allocate_row(r, 10); 
-   len = k_to_row_len(10); 
-   assert(!row_is_null(r, 10)); 
-   for(int c = 0; c < len; c++){
-      assert(r->p[10][c].n == 0);
-      assert(r->p[10][c].set == 0);
-   }
-   bsa_free(r);
+   //returns false when try insert data into NULL row 
+   assert(!data_inserted(d, 3, 2, 1234567891));
 
-   //allocate row 17
-   bsa* h = bsa_init();
-   assert(h);
-   allocate_row(h, 17); 
-   len = k_to_row_len(17); //length is 131072
-   assert(!row_is_null(h, 17)); //check row 2 pointer is pointing to array
-   for(int c = 0; c < len; c++){
-      assert(h->p[17][c].n == 0);
-      assert(h->p[17][c].set == 0);
-   }
-   bsa_free(h);
+   //BSA_MAXINDEX
+   assert(bsa_maxindex(d)==-1); //returns -1 for NULL BSA
 
-   //allocate row 29
-   bsa* s = bsa_init();
-   assert(s);
-   allocate_row(s, 29); 
-   len = k_to_row_len(29); 
-   assert(!row_is_null(s, 29)); 
-   for(int c = 0; c < len; c++){
-      assert(s->p[29][c].n == 0);
-      assert(s->p[29][c].set == 0);
+   bsa_free(d);
+    
+   //** NO MEMORY ALLOCATION AND FREEING **
+
+   //K_IS_VALID
+   for(int k=0; k<BSA_ROWS; k++){
+      assert(k_is_valid(k)==true);
    }
-   bsa_free(s);
+   assert(k_is_valid(-1)==false); //negative: out of bounds lower
+   assert(k_is_valid(30)==false); //out of bounds higher
+
+   //INDX_IS_VALID
+   assert(indx_is_valid(0)==true);
+   assert(indx_is_valid(1)==true);
+   assert(indx_is_valid(9)==true);
+   assert(indx_is_valid(100)==true);
+   assert(indx_is_valid(600)==true);
+   assert(indx_is_valid(600000)==true);
+   assert(indx_is_valid(900000000)==true);
+   assert(indx_is_valid(MAX_INDEX)==true);
+   assert(indx_is_valid(-1)==false); //negative: out of bounds lower
+   assert(indx_is_valid(MAX_INDEX+1)==false); //out of bounds higher
+
+   //ROW_INDX_TO_INDX 
+   assert(row_indx_to_indx(-1, 0)==-1); //invalid row low
+   assert(row_indx_to_indx(30, 0)==-1); //invalid row high
+   assert(row_indx_to_indx(0, 0)==0);
+   assert(row_indx_to_indx(1, 0)==1);
+   assert(row_indx_to_indx(2, 0)==3);
+   assert(row_indx_to_indx(2, 1)==4);
+   assert(row_indx_to_indx(2, 3)==6);
+   assert(row_indx_to_indx(3, 4)==11);
+   assert(row_indx_to_indx(3, 7)==14);
+   assert(row_indx_to_indx(4, 4)==19);
+   assert(row_indx_to_indx(5, 31)==62);
+   assert(row_indx_to_indx(6, 63)==126);
+   assert(row_indx_to_indx(7, 127)==254);
+   assert(row_indx_to_indx(8, 255)==510);
+   assert(row_indx_to_indx(9, 511)==1022);
+   assert(row_indx_to_indx(10, 1023)==2046);
+   assert(row_indx_to_indx(11, 2047)==4094);
+   assert(row_indx_to_indx(12, 4095)==8190);
+   assert(row_indx_to_indx(13, 8191)==16382);
+   assert(row_indx_to_indx(14, 16383)==32766);
+   assert(row_indx_to_indx(15, 32767)==65534);
+   assert(row_indx_to_indx(16, 65535)==131070);
+   assert(row_indx_to_indx(17, 131071)==262142);
+   assert(row_indx_to_indx(18, 262143)==524286);
+   assert(row_indx_to_indx(19, 524287)==1048574);
+   assert(row_indx_to_indx(20, 1048575)==2097150);
+   assert(row_indx_to_indx(21, 2097151)==4194302);
+   assert(row_indx_to_indx(22, 4194303)==8388606);
+   assert(row_indx_to_indx(23, 8388607)==16777214);
+   assert(row_indx_to_indx(24, 16777215)==33554430);
+   assert(row_indx_to_indx(25, 33554431)==67108862);
+   assert(row_indx_to_indx(26, 67108863)==134217726);
+   assert(row_indx_to_indx(27, 134217727)==268435454);
+   assert(row_indx_to_indx(28, 268435455)==536870910);
+   assert(row_indx_to_indx(29, 536870911)==1073741822);
+
+   //INDX_TO_COL
+   assert(indx_to_col(-5)==-1); //negative index returns -1
+   assert(indx_to_col(1073741823)==-1); //index too high returns -1
+   assert(indx_to_col(0)==0);
+   assert(indx_to_col(1)==0);
+   assert(indx_to_col(2)==1);
+   assert(indx_to_col(3)==0);
+   assert(indx_to_col(4)==1);
+   assert(indx_to_col(5)==2);
+   assert(indx_to_col(6)==3);
+   assert(indx_to_col(7)==0);
+   assert(indx_to_col(8)==1);
+   assert(indx_to_col(9)==2);
+   assert(indx_to_col(10)==3);
+   assert(indx_to_col(11)==4);
+   assert(indx_to_col(12)==5);
+   assert(indx_to_col(13)==6);
+   assert(indx_to_col(14)==7);
+   assert(indx_to_col(15)==0); //first indx in row 4
+   assert(indx_to_col(16)==1); //second indx in row 4
+   assert(indx_to_col(30)==15); //last indx in row 4
+   assert(indx_to_col(31)==0); //first indx in row 5
+   assert(indx_to_col(35)==4); //4th indx in row 5
+   assert(indx_to_col(62)==31); //last indx in row 5
+   assert(indx_to_col(63)==0); //first indx in row 6
+   assert(indx_to_col(69)==6); //6th indx in row 6
+   assert(indx_to_col(126)==63); //last indx in row 6
+   assert(indx_to_col(127)==0);//first indx in row 7
+   assert(indx_to_col(137)==10);//10th indx in row 7
+   assert(indx_to_col(254)==127);//last indx in row 7
+   assert(indx_to_col(255)==0);//first indx in row 8
+   assert(indx_to_col(510)==255); //last index row 8
+   assert(indx_to_col(511)==0); //first index row 9
+   assert(indx_to_col(1022)==511); //last index row 9
+   assert(indx_to_col(2046)==1023); //last index row 10
+   assert(indx_to_col(4094)==2047); //last index row 11
+   assert(indx_to_col(8190)==4095); //last index row 12
+   assert(indx_to_col(16382)==8191); //last index row 13
+   assert(indx_to_col(32766)==16383); //last index row 14
+   assert(indx_to_col(65534)==32767); //last index row 15
+   assert(indx_to_col(131070)==65535); //last index row 16
+   assert(indx_to_col(262142)==131071); //last index row 17
+   assert(indx_to_col(524286)==262143); //last index row 18
+   assert(indx_to_col(1048574)==524287); //last index row 19
+   assert(indx_to_col(2097150)==1048575); //last index row 20
+   assert(indx_to_col(4194302)==2097151); //last index row 21
+   assert(indx_to_col(8388606)==4194303); //last index row 22
+   assert(indx_to_col(16777214)==8388607); //last index row 23
+   assert(indx_to_col(33554430)==16777215); //last index row 24
+   assert(indx_to_col(67108862)==33554431); //last index row 25
+   assert(indx_to_col(134217726)==67108863); //last index row 26
+   assert(indx_to_col(268435454)==134217727); //last index row 27
+   assert(indx_to_col(536870910)==268435455); //last index row 28
+   assert(indx_to_col(1073741822)==536870911); //last index row 29
+
+   //MAX_ROW_INDX
+   assert(max_row_indx(-1)==-1); //invalid row returns -1
+   assert(max_row_indx(0)==0);
+   assert(max_row_indx(1)==2);
+   assert(max_row_indx(2)==6);
+   assert(max_row_indx(3)==14);
+   assert(max_row_indx(4)==30);
+   assert(max_row_indx(5)==62);
+   assert(max_row_indx(6)==126);
+   assert(max_row_indx(7)==254);
+   assert(max_row_indx(8)==510);
+   assert(max_row_indx(9)==1022);
+   assert(max_row_indx(10)==2046);
+   assert(max_row_indx(11)==4094);
+   assert(max_row_indx(12)==8190);
+   assert(max_row_indx(13)==16382);
+   assert(max_row_indx(14)==32766);
+   assert(max_row_indx(15)==65534);
+   assert(max_row_indx(16)==131070);
+   assert(max_row_indx(17)==262142);
+   assert(max_row_indx(18)==524286);
+   assert(max_row_indx(19)==1048574);
+   assert(max_row_indx(20)==2097150);
+   assert(max_row_indx(21)==4194302);
+   assert(max_row_indx(22)==8388606);
+   assert(max_row_indx(23)==16777214);
+   assert(max_row_indx(24)==33554430);
+   assert(max_row_indx(25)==67108862);
+   assert(max_row_indx(26)==134217726);
+   assert(max_row_indx(27)==268435454);
+   assert(max_row_indx(28)==536870910);
+   assert(max_row_indx(29)==1073741822);
+   assert(max_row_indx(30)==-1); //invalid row returns -1
    
-
    //K_TO_ROW_LEN
    assert(k_to_row_len(0)==1); 
    assert(k_to_row_len(1)==2); 
@@ -789,215 +894,6 @@ void test(void)
    assert(indx_to_row(536870911)==29); //first 
    assert(indx_to_row(536999999)==29); //middle
    assert(indx_to_row(1073741822)==29); //last
-   
-   //MAX_ROW_INDX
-   assert(max_row_indx(-1)==-1); //invalid row returns -1
-   assert(max_row_indx(0)==0);
-   assert(max_row_indx(1)==2);
-   assert(max_row_indx(2)==6);
-   assert(max_row_indx(3)==14);
-   assert(max_row_indx(4)==30);
-   assert(max_row_indx(5)==62);
-   assert(max_row_indx(6)==126);
-   assert(max_row_indx(7)==254);
-   assert(max_row_indx(8)==510);
-   assert(max_row_indx(9)==1022);
-   assert(max_row_indx(10)==2046);
-   assert(max_row_indx(11)==4094);
-   assert(max_row_indx(12)==8190);
-   assert(max_row_indx(13)==16382);
-   assert(max_row_indx(14)==32766);
-   assert(max_row_indx(15)==65534);
-   assert(max_row_indx(16)==131070);
-   assert(max_row_indx(17)==262142);
-   assert(max_row_indx(18)==524286);
-   assert(max_row_indx(19)==1048574);
-   assert(max_row_indx(20)==2097150);
-   assert(max_row_indx(21)==4194302);
-   assert(max_row_indx(22)==8388606);
-   assert(max_row_indx(23)==16777214);
-   assert(max_row_indx(24)==33554430);
-   assert(max_row_indx(25)==67108862);
-   assert(max_row_indx(26)==134217726);
-   assert(max_row_indx(27)==268435454);
-   assert(max_row_indx(28)==536870910);
-   assert(max_row_indx(29)==1073741822);
-   assert(max_row_indx(30)==-1); //invalid row returns -1
-
-   //INDX_TO_COL
-   assert(indx_to_col(-5)==-1); //negative index returns -1
-   assert(indx_to_col(1073741823)==-1); //index too high returns -1
-   assert(indx_to_col(0)==0);
-   assert(indx_to_col(1)==0);
-   assert(indx_to_col(2)==1);
-   assert(indx_to_col(3)==0);
-   assert(indx_to_col(4)==1);
-   assert(indx_to_col(5)==2);
-   assert(indx_to_col(6)==3);
-   assert(indx_to_col(7)==0);
-   assert(indx_to_col(8)==1);
-   assert(indx_to_col(9)==2);
-   assert(indx_to_col(10)==3);
-   assert(indx_to_col(11)==4);
-   assert(indx_to_col(12)==5);
-   assert(indx_to_col(13)==6);
-   assert(indx_to_col(14)==7);
-   assert(indx_to_col(15)==0); //first indx in row 4
-   assert(indx_to_col(16)==1); //second indx in row 4
-   assert(indx_to_col(30)==15); //last indx in row 4
-   assert(indx_to_col(31)==0); //first indx in row 5
-   assert(indx_to_col(35)==4); //4th indx in row 5
-   assert(indx_to_col(62)==31); //last indx in row 5
-   assert(indx_to_col(63)==0); //first indx in row 6
-   assert(indx_to_col(69)==6); //6th indx in row 6
-   assert(indx_to_col(126)==63); //last indx in row 6
-   assert(indx_to_col(127)==0);//first indx in row 7
-   assert(indx_to_col(137)==10);//10th indx in row 7
-   assert(indx_to_col(254)==127);//last indx in row 7
-   assert(indx_to_col(255)==0);//first indx in row 8
-   assert(indx_to_col(510)==255); //last index row 8
-   assert(indx_to_col(511)==0); //first index row 9
-   assert(indx_to_col(1022)==511); //last index row 9
-   assert(indx_to_col(2046)==1023); //last index row 10
-   assert(indx_to_col(4094)==2047); //last index row 11
-   assert(indx_to_col(8190)==4095); //last index row 12
-   assert(indx_to_col(16382)==8191); //last index row 13
-   assert(indx_to_col(32766)==16383); //last index row 14
-   assert(indx_to_col(65534)==32767); //last index row 15
-   assert(indx_to_col(131070)==65535); //last index row 16
-   assert(indx_to_col(262142)==131071); //last index row 17
-   assert(indx_to_col(524286)==262143); //last index row 18
-   assert(indx_to_col(1048574)==524287); //last index row 19
-   assert(indx_to_col(2097150)==1048575); //last index row 20
-   assert(indx_to_col(4194302)==2097151); //last index row 21
-   assert(indx_to_col(8388606)==4194303); //last index row 22
-   assert(indx_to_col(16777214)==8388607); //last index row 23
-   assert(indx_to_col(33554430)==16777215); //last index row 24
-   assert(indx_to_col(67108862)==33554431); //last index row 25
-   assert(indx_to_col(134217726)==67108863); //last index row 26
-   assert(indx_to_col(268435454)==134217727); //last index row 27
-   assert(indx_to_col(536870910)==268435455); //last index row 28
-   assert(indx_to_col(1073741822)==536870911); //last index row 29
-
-   //BSA_IS_EMPTY
-   bsa* c = bsa_init(); //empty BSA
-   assert(bsa_is_empty(c)==true);
-   allocate_row(c, 0); //allocate one row: BSA not empty
-   assert(bsa_is_empty(c)==false); 
-   bsa_free(c);
-   
-   //TOP_LIVE_ROW
-   bsa* d = bsa_init();
-   assert(top_live_row(d)==-1); //returns -1 for empty BSA i.e. no live rows
-   allocate_row(d, 0); //allocate row 0
-   assert(top_live_row(d)==0);
-   allocate_row(d, 1); //allocate row 1
-   assert(top_live_row(d)==1);
-   allocate_row(d, 5); //allocate row 5
-   assert(top_live_row(d)==5);
-   allocate_row(d, 10); //allocate row 10
-   assert(top_live_row(d)==10);
-   allocate_row(d, 17); //allocate row 17
-   assert(top_live_row(d)==17);
-   allocate_row(d, 25); //allocate row 25
-   assert(top_live_row(d)==25);
-   allocate_row(d, 29); //allocate row 29
-   assert(top_live_row(d)==29);
-   bsa_free(d);
-
-   //ROW_INDX_TO_INDX 
-   assert(row_indx_to_indx(-1, 0)==-1); //invalid row low
-   assert(row_indx_to_indx(30, 0)==-1); //invalid row high
-   assert(row_indx_to_indx(0, 0)==0);
-   assert(row_indx_to_indx(1, 0)==1);
-   assert(row_indx_to_indx(2, 0)==3);
-   assert(row_indx_to_indx(2, 1)==4);
-   assert(row_indx_to_indx(2, 3)==6);
-   assert(row_indx_to_indx(3, 4)==11);
-   assert(row_indx_to_indx(3, 7)==14);
-   assert(row_indx_to_indx(4, 4)==19);
-   assert(row_indx_to_indx(5, 31)==62);
-   assert(row_indx_to_indx(6, 63)==126);
-   assert(row_indx_to_indx(7, 127)==254);
-   assert(row_indx_to_indx(8, 255)==510);
-   assert(row_indx_to_indx(9, 511)==1022);
-   assert(row_indx_to_indx(10, 1023)==2046);
-   assert(row_indx_to_indx(11, 2047)==4094);
-   assert(row_indx_to_indx(12, 4095)==8190);
-   assert(row_indx_to_indx(13, 8191)==16382);
-   assert(row_indx_to_indx(14, 16383)==32766);
-   assert(row_indx_to_indx(15, 32767)==65534);
-   assert(row_indx_to_indx(16, 65535)==131070);
-   assert(row_indx_to_indx(17, 131071)==262142);
-   assert(row_indx_to_indx(18, 262143)==524286);
-   assert(row_indx_to_indx(19, 524287)==1048574);
-   assert(row_indx_to_indx(20, 1048575)==2097150);
-   assert(row_indx_to_indx(21, 2097151)==4194302);
-   assert(row_indx_to_indx(22, 4194303)==8388606);
-   assert(row_indx_to_indx(23, 8388607)==16777214);
-   assert(row_indx_to_indx(24, 16777215)==33554430);
-   assert(row_indx_to_indx(25, 33554431)==67108862);
-   assert(row_indx_to_indx(26, 67108863)==134217726);
-   assert(row_indx_to_indx(27, 134217727)==268435454);
-   assert(row_indx_to_indx(28, 268435455)==536870910);
-   assert(row_indx_to_indx(29, 536870911)==1073741822);
-
-   //IS_ROW_EMPTY
-   bsa* e = bsa_init();
-   allocate_row(e, 3); //allocate row 3
-   assert(is_row_empty(e, 3)==true);
-   bsa_set(e, 8, 10);
-   assert(is_row_empty(e, 3)==false);
-   bsa_free(e);
-
-   //MAX_SET_ROW_INDX
-   bsa* l = bsa_init();
-   assert(l);
-   bsa_set(l, 8, 4); //set index 8 to 4
-   bsa_set(l, 10, 5); //set index 10 to 5
-   assert(max_set_row_indx(l, 3)==3); // max set index in row 3 is row index 3 i.e. abs index 10
-   bsa_set(l, 13, 7); //set index 13 to 6
-   assert(max_set_row_indx(l, 3)==6); // max set index in row 3 is row index 6 i.e. abs index 13
-   bsa_set(l, 14, 12); //set index 14 to 12
-   assert(max_set_row_indx(l, 3)==7); // max set index in row 3 is row index 7 i.e. abs index 14
-   bsa_set(l, 20, 300);
-   assert(max_set_row_indx(l, 4)==5); // max set index in row 4 is row index 5
-   bsa_set(l, 262142, 12);
-   assert(max_set_row_indx(l, 17)==131071); // max set index in row 17 is row index 131071
-   bsa_set(l, 1073741822, 55);
-   assert(max_set_row_indx(l, 29)==536870911); // max set index in row 17 is row index 131071
-   bsa_free(l);
-  
-   //K_IS_VALID
-   for(int k=0; k<BSA_ROWS; k++){
-      assert(k_is_valid(k)==true);
-   }
-   assert(k_is_valid(-1)==false); //negative: out of bounds lower
-   assert(k_is_valid(30)==false); //out of bounds higher
-
-   //INDX_IS_VALID
-   assert(indx_is_valid(0)==true);
-   assert(indx_is_valid(1)==true);
-   assert(indx_is_valid(9)==true);
-   assert(indx_is_valid(100)==true);
-   assert(indx_is_valid(600)==true);
-   assert(indx_is_valid(600000)==true);
-   assert(indx_is_valid(900000000)==true);
-   assert(indx_is_valid(MAX_INDEX)==true);
-   assert(indx_is_valid(-1)==false); //negative: out of bounds lower
-   assert(indx_is_valid(MAX_INDEX+1)==false); //out of bounds higher
- 
-   //ROW_IS_NULL
-   bsa* t = bsa_init();
-   assert(t);
-   for(int row = 0; row < BSA_ROWS; row++){
-      assert(row_is_null(t, row));
-   }
-   bsa_set(t, 20, 300); //set value in row 4
-   assert(!row_is_null(t, 4)); //check row 4 is not null
-   bsa_set(t, 4, 3); //set value in row 2
-   assert(!row_is_null(t, 2)); //check row 2 is not null
-   bsa_free(t);
 }
 
 

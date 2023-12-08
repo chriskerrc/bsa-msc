@@ -26,20 +26,21 @@ struct bsa {
 
 }; 
 
-int k_to_row_len(int k); 
 void allocate_row(bsa* b, int row);
-int indx_to_row(int indx);
-int max_row_indx(int row);
-int indx_to_col(int indx);
 bool bsa_is_empty(bsa* b); 
 int top_live_row(bsa* b); 
-int row_indx_to_indx(int row, int row_indx); 
 bool is_row_empty(bsa* b, int row); 
 int max_set_row_indx(bsa* b, int row);
 void valid_row_to_string(bsa* b, char* str, char* tmp, int row); 
 bool data_inserted(bsa* b, int row, int col, int d);
 bool cell_is_set(bsa* b, int row, int col);
 bool row_is_null(bsa* b, int row);
+int k_to_row_len(int k); 
+void add(int* p, int* n);
+int indx_to_row(int indx);
+int max_row_indx(int row);
+int indx_to_col(int indx);
+int row_indx_to_indx(int row, int row_indx); 
 bool k_is_valid(int k);
 bool indx_is_valid(int indx);
-void add(int* p, int* n);
+
